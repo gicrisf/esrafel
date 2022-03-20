@@ -5,23 +5,27 @@ use gtk::{
     },
     Orientation,
 };
-use relm4::{adw, gtk, send, AppUpdate, Model, RelmApp, Sender, Widgets};
+use relm4::{adw, gtk, send, AppUpdate, RelmComponent, Model, RelmApp, Sender, Widgets};
 
 #[derive(Default)]
 struct AppModel {
     counter: u8,
-    attention: bool,
+    montecarlo: bool,
 }
 
 enum AppMsg {
     Increment,
     Decrement,
-    Attention(bool),
+    Montecarlo(bool),
 }
+
+// #[derive(relm4::Components)]
+// struct AppComponents {}
 
 impl Model for AppModel {
     type Msg = AppMsg;
     type Widgets = AppWidgets;
+    // type Components = AppComponents;
     type Components = ();
 }
 
@@ -34,8 +38,8 @@ impl AppUpdate for AppModel {
             AppMsg::Decrement => {
                 self.counter = self.counter.wrapping_sub(1);
             }
-            AppMsg::Attention(v) => {
-                self.attention = v;
+            AppMsg::Montecarlo(v) => {
+                self.montecarlo = v;
             }
         }
         true
@@ -52,19 +56,18 @@ impl Widgets<AppModel, ()> for AppWidgets {
                 set_orientation: gtk::Orientation::Vertical,
                 append = &adw::HeaderBar {
                     set_title_widget: title = Some(&adw::ViewSwitcherTitle) {
-                        set_title: "A stack switcher App",
+                        set_title: "Esrafel",
                         set_stack: Some(&stack),
                     },
                     set_centering_policy: CenteringPolicy::Strict,
                 },
                 append: stack = &adw::ViewStack {
                     set_vexpand: true,
-                    add_titled(Some("First"), "First Page") = &gtk::Box {
+                    add_titled(Some("Params"), "Parameters") = &gtk::Box {
                         set_orientation: Orientation::Vertical,
                         set_hexpand: false,
                         append = &gtk::Label {
-                            set_label: "This is the start page",
-
+                            set_label: "This is the parameters page",
                         },
                         append = &gtk::Button {
                             set_label: "Increase",
@@ -78,28 +81,26 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                 send!(sender, AppMsg::Decrement)
                             }
                         },
-                        append = &gtk::ToggleButton {
-                            set_label: "Needs Attention",
-                            set_active: model.attention,
-                            connect_clicked(sender) => move |v| {
-                                send!(sender, AppMsg::Attention(v.is_active()))
-                            }
-                        },
-                    } -> first_page: ViewStackPage {
+                    } -> params_page: ViewStackPage {
                         set_icon_name: Some("document-print-symbolic"),
-                        set_needs_attention: watch!(model.attention),
                         set_badge_number: watch!(model.counter as u32),
                     },
-                    add_titled(Some("Second"), "Second Page") = &gtk::Label {
-                        set_label: "This is the second page"
-                    } -> {
+                    add_titled(Some("Plot"), "Plot") = &gtk::Box {
+                        set_orientation: Orientation::Vertical,
+                        set_hexpand: false,
+                        append = &gtk::Label {
+                            set_label: "This is the plotting page"
+                        },
+                        append = &gtk::ToggleButton {
+                            set_label: "Run MonteCarlo",
+                            set_active: model.montecarlo,
+                            connect_clicked(sender) => move |v| {
+                                send!(sender, AppMsg::Montecarlo(v.is_active()))
+                            }
+                        },
+                    } -> plot_page: ViewStackPage {
                         set_icon_name: Some("media-playback-start-symbolic"),
-                        set_badge_number: 3,
-                    },
-                    add_titled(Some("Third"), "Third Page") = &gtk::Label {
-                        set_label: "This is the last page"
-                    } -> {
-                        set_icon_name: Some("mypaint-brushes-symbolic")
+                        set_needs_attention: watch!(model.montecarlo),
                     },
                 },
                 append: bottom_bar = &adw::ViewSwitcherBar {
@@ -120,7 +121,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
 fn main() {
     let model = AppModel {
         counter: 5,
-        attention: true,
+        montecarlo: true,
     };
     let app = RelmApp::new(model);
     app.run();
