@@ -91,24 +91,27 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
                 set_content_height: 500,
                 set_draw_func: |_, cr, _, _| {
                     // TODO replace with sinusoidal opening demo
-                    // text example from:
+                    // text example adapted from:
                     // https://github.com/gtk-rs/gtk3-rs/blob/master/examples/cairo_test/main.rs
+
+                    // TODO Study how this scaling function works exactly
                     cr.scale(500f64, 500f64);
 
+                    // Yellow background
                     cr.set_source_rgb(250.0 / 255.0, 224.0 / 255.0, 55.0 / 255.0);
                     cr.paint().expect("Invalid cairo surface state");
 
-                    cr.set_line_width(0.05);
-                    cr.set_source_rgb(0.3, 0.3, 0.3);
-                    cr.rectangle(0.0, 0.0, 1.0, 1.0);
-                    cr.stroke().expect("Invalid cairo surface state");
-
+                    // Line drawer settings
                     cr.set_line_width(0.03);
+                    cr.set_source_rgb(0.3, 0.3, 0.3);
 
-                    // draw circle
-                    cr.arc(0.5, 0.5, 0.4, 0.0, PI * 2.);
+                    // Draw rectangle
+                    // cr.rectangle(0.1, 0.1, 1.0, 1.0);
+                    // cr.stroke().expect("Invalid cairo surface state");
+
+                    // Draw circle
+                    cr.arc(0.6, 0.6, 0.4, 0.0, PI * 2.);
                     cr.stroke().expect("Invalid cairo surface state");
-                    cr.fill().expect("Incalid cairo surface state");
                 },
 
                 connect_resize(sender) => move |_, x, y| {
@@ -204,9 +207,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                     add_titled(Some("Plot"), "Plot") = &gtk::Box {
                         set_orientation: Orientation::Vertical,
                         set_hexpand: false,
-                        append = &gtk::Label {
-                            set_label: "This is the plotting page"
-                        },
+
+                        // TODO choose if adding plot-related status here
+
                         // `component!` seems like it's still a not supported macro?
                         // append: component!(Some(chart)),
                         // ALERT, the next line couldn't work in other branches
