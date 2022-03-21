@@ -1,13 +1,16 @@
-use adw::{prelude::AdwApplicationWindowExt, CenteringPolicy, ViewStackPage};
+use adw::{
+    prelude::{AdwApplicationWindowExt},
+    CenteringPolicy, ViewStackPage
+};
 use gtk::{
-    prelude::{
-        BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-    },
+    prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt, DrawingAreaExt, DrawingAreaExtManual},
     Orientation,
 };
-// use relm4::{adw, gtk, send, AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets};
-use relm4::*;
+use relm4::{adw, gtk, send, AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets};
+// use relm4::*;
 // use relm4::factory::FactoryVecDeque;
+
+use std::f64::consts::PI;
 
 // -- Entities
 
@@ -26,6 +29,99 @@ pub struct Radical {
     // pub nucs: Vec<Nucleus>,
 }
 
+// -- Chart model
+
+#[derive(Default)]
+struct ChartModel {
+    width: f64,
+    height: f64,
+}
+
+enum ChartMsg {
+    Draw,
+    Resize((i32, i32)),
+}
+
+impl Model for ChartModel {
+    type Msg = ChartMsg;
+    type Widgets = ChartWidgets;
+    type Components = ();
+}
+
+impl ComponentUpdate<AppModel> for ChartModel {
+    fn init_model(_parent_model: &AppModel) -> Self {
+        ChartModel {
+            width: 100.0,
+            height: 100.0,
+        }
+    }
+
+    fn update(
+        &mut self,
+        msg: ChartMsg,
+        _components: &(),
+        _sender: Sender<ChartMsg>,
+        parent_sender: Sender<AppMsg>,
+    ) {
+        match msg {
+            ChartMsg::Draw => {
+                // Draw
+            }
+            ChartMsg::Resize((x, y)) => {
+                self.width = x as f64;
+                self.height = y as f64;
+            }
+        }
+    }
+}
+
+// -- Chart Widgets
+
+#[relm4::widget]
+impl Widgets<ChartModel, AppModel> for ChartWidgets {
+    view! {
+        gtk::Box {
+            set_orientation: gtk::Orientation::Vertical,
+            set_spacing: 10,
+            set_hexpand: true,
+            append: area = &gtk::DrawingArea {
+                set_vexpand: true,
+                set_hexpand: true,
+                set_content_width: 500,
+                set_content_height: 500,
+                set_draw_func: |_, cr, _, _| {
+                    // TODO replace with sinusoidal opening demo
+                    // text example from:
+                    // https://github.com/gtk-rs/gtk3-rs/blob/master/examples/cairo_test/main.rs
+                    cr.scale(500f64, 500f64);
+
+                    cr.set_source_rgb(250.0 / 255.0, 224.0 / 255.0, 55.0 / 255.0);
+                    cr.paint().expect("Invalid cairo surface state");
+
+                    cr.set_line_width(0.05);
+                    cr.set_source_rgb(0.3, 0.3, 0.3);
+                    cr.rectangle(0.0, 0.0, 1.0, 1.0);
+                    cr.stroke().expect("Invalid cairo surface state");
+
+                    cr.set_line_width(0.03);
+
+                    // draw circle
+                    cr.arc(0.5, 0.5, 0.4, 0.0, PI * 2.);
+                    cr.stroke().expect("Invalid cairo surface state");
+                    cr.fill().expect("Incalid cairo surface state");
+                },
+
+                connect_resize(sender) => move |_, x, y| {
+                    send!(sender, ChartMsg::Resize((x, y)))
+                }
+            }  // ./DrawingArea
+        }
+    }
+}
+
+
+// -- AppModel
+
 #[derive(Default)]
 struct AppModel {
     empirical: Option<Vec<f64>>,
@@ -41,64 +137,6 @@ struct AppModel {
 enum AppMsg {
     Montecarlo(bool),
 }
-
-// -- Chart model
-
-#[derive(Default)]
-struct ChartModel {}
-
-enum ChartMsg {
-    Draw,
-}
-
-impl Model for ChartModel {
-    type Msg = ChartMsg;
-    type Widgets = ChartWidgets;
-    type Components = ();
-}
-
-impl ComponentUpdate<AppModel> for ChartModel {
-    fn init_model(_parent_model: &AppModel) -> Self {
-        ChartModel {}
-    }
-
-    fn update(
-        &mut self,
-        msg: ChartMsg,
-        _components: &(),
-        _sender: Sender<ChartMsg>,
-        parent_sender: Sender<AppMsg>,
-    ) {
-        match msg {
-            ChartMsg::Draw => {
-                // Draw
-            }
-        }
-    }
-}
-
-// -- Chart Widgets
-
-#[relm4::widget]
-impl Widgets<ChartModel, AppModel> for ChartWidgets {
-    view! {
-        gtk::Box {
-            set_orientation: gtk::Orientation::Vertical,
-            set_spacing: 10,
-            set_hexpand: true,
-            append = &gtk::Label {
-                set_label: "Left-click to add circles, resize or right-click to reset!",
-            },
-            append: area = &gtk::DrawingArea {
-                set_vexpand: true,
-                set_hexpand: true,
-            }  // ./DrawingArea
-        }
-    }
-}
-
-
-// ... Back to AppModel
 
 #[derive(relm4::Components)]
 struct AppComponents {
@@ -121,6 +159,8 @@ impl AppUpdate for AppModel {
         true
     }
 }
+
+// -- AppWidgets
 
 #[relm4::widget]
 impl Widgets<AppModel, ()> for AppWidgets {
@@ -167,7 +207,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                         append = &gtk::Label {
                             set_label: "This is the plotting page"
                         },
-                        // append: component!(Some(chart)),  // Still not supported macro?
+                        // `component!` seems like it's still a not supported macro?
+                        // append: component!(Some(chart)),
+                        // ALERT, the next line couldn't work in other branches
                         append: components.chart.root_widget(),
                         append = &gtk::ToggleButton {
                             set_label: "Run MonteCarlo",
@@ -195,6 +237,8 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .build();
     }
 }
+
+// -- MAIN
 
 fn main() {
     let model = AppModel {
