@@ -1,18 +1,23 @@
-use gtk::cairo::{Context, Operator};
 use adw::{
     prelude::{AdwApplicationWindowExt},
     CenteringPolicy, ViewStackPage
 };
+
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt, DrawingAreaExtManual},
+              DrawingAreaExt},
     Orientation,
+    cairo::{Context, Operator},
 };
-use relm4::{adw, gtk, send, AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets};
-// use relm4::*;
-// use relm4::factory::FactoryVecDeque;
 
-// use std::f64::consts::PI;
+use relm4::{
+    adw, gtk, send,
+    AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets,
+    // factory::FactoryVecDeque,
+};
+
+mod draw;
+use draw::draw_classic;
 
 // -- Entities
 
@@ -71,6 +76,8 @@ impl ComponentUpdate<AppModel> for ChartModel {
             // ChartMsg::Demo => {}
             ChartMsg::Update => {
                 // Draw
+                // If montecarlo
+                // Just get data from the App model with the simulator running
                 self.line = dsp::generator::noise(1024, 20.0, 8).data;
             }
             ChartMsg::Resize((x, y)) => {
@@ -83,73 +90,7 @@ impl ComponentUpdate<AppModel> for ChartModel {
 
 // -- Chart Widgets
 
-fn draw(cr: &Context, peaks: &Vec<f32>, w: f64, h: f64) {
-    // TODO replace with sinusoidal opening demo
-    // text example adapted from:
-    // https://github.com/gtk-rs/gtk3-rs/blob/master/examples/cairo_test/main.rs
 
-
-    // TODO Study how this scaling function works exactly
-    // cr.scale(500f64, 500f64);
-    // cr.scale(2f64, 2f64);
-    //
-    let w = w as f32;
-    let h = h as f32;
-
-    // Yellow background
-    cr.set_source_rgb(250.0 / 255.0, 224.0 / 255.0, 55.0 / 255.0);
-    cr.paint().expect("Invalid cairo surface state");
-
-    // Line drawer settings
-    cr.set_line_width(1.0);
-    cr.set_source_rgb(0.3, 0.3, 0.3);
-
-    // Draw rectangle
-    // cr.rectangle(0.1, 0.1, 1.0, 1.0);
-    // cr.stroke().expect("Invalid cairo surface state");
-
-    // Draw circle
-    // cr.arc(0.6, 0.6, 0.4, 0.0, PI * 2.);
-    // cr.stroke().expect("Invalid cairo surface state");
-
-    // let peaks = self.line;
-
-    // CLASSIC 1999 PLOTTING ITERATION STRATEGY
-    // let mut peaks = vec![5.0; 1024 as usize];
-    // println!("vec is: {:?}", peaks);
-
-    let verti_center = h/2.0;
-    let horiz_center = w/2.0;
-
-    // let theor_min = (peaks.iter().fold(f64::INFINITY, |a, &b| a.min(b.into()))) as f32;
-    // let theor_max = (peaks.iter().fold(f64::INFINITY, |a, &b| a.max(b.into()))) as f32;
-    // let verti_center = h as f32 / (theor_max-theor_min);
-
-    // let theor_min = 0.0;
-    // let theor_max = 100.0;
-
-    let x_incr = (w as f32) / 1024.0;
-    // let y_incr = (h as f32) / (theor_max-theor_min);
-    // println!("y_incr is: {}", y_incr);
-
-    let mut x1 = 0.0 as f32;
-
-    cr.move_to(x1.into(), 0.0);
-
-    for point in 0..1024 {
-        // pointer
-        let p_from = verti_center as f32 + peaks[point]; // * y_incr;
-        let p_to = verti_center as f32 - peaks[point]; // * y_incr;
-        let x2 = x1 as f32 + (1.0 as f32 *x_incr);
-        // println!("p_from {}, p_to {}", p_from, p_to);
-        cr.move_to(x1.into(), p_from.into());
-        cr.line_to(x2.into(), p_to.into());
-        x1=x2;
-    }
-
-    cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
-    cr.stroke().expect("invalid cairo surface state");
-}
 
 #[relm4::widget]
 impl Widgets<ChartModel, AppModel> for ChartWidgets {
@@ -189,7 +130,7 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
 
     fn pre_view() {
         let cr = self.handler.get_context().unwrap();
-        draw(&cr, &model.line, model.width, model.height);
+        draw_classic(&cr, &model.line, model.width, model.height);
     }  // pre view
 }
 
@@ -202,7 +143,7 @@ struct AppModel {
     theoretical: Option<Vec<f64>>,
     points: f64,
     sweep: f64,
-    // params: FactoryVecDeque<Radical>,  // TODO implement Radical
+    // params: FactoryVecDeque<Radical>,
     sigma: f64,
     iters: usize,
     montecarlo: bool,
@@ -300,9 +241,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                 append: bottom_bar = &adw::ViewSwitcherBar {
                     set_stack: Some(&stack),
                 }
-            },
-        }
-    }
+            },  // set_content
+        } // main_window
+    }  // view!
 
     fn post_init() {
        title
