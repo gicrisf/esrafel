@@ -25,9 +25,11 @@ use relm4_components::{
 };
 
 use std::path::PathBuf;
+use std::fs::File;
+use std::io::Read;
 
-mod draw;
-use draw::draw_classic;
+mod drawers;
+mod esr_io;
 
 // -- Entities
 
@@ -140,7 +142,7 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
 
     fn pre_view() {
         let cr = self.handler.get_context().unwrap();
-        draw_classic(&cr, &model.line, model.width, model.height);
+        drawers::draw_classic(&cr, &model.line, model.width, model.height);
     }  // pre view
 }
 
@@ -217,6 +219,15 @@ impl AppUpdate for AppModel {
             }  // Montecarlo
             AppMsg::Open(path) => {
                 println!("* Open file at {:?} *", path);
+                let mut data = String::new();
+                let mut f = File::open(path).expect("Unable to open file");
+                f.read_to_string(&mut data).expect("Unable to read string");
+                // println!("{}", data);
+
+                // TODO manage errors in reading files!
+                self.empirical = Some(esr_io::get_from_ascii(&data));
+                // TODO Tell to Chart
+                ChartMsg::Update;
             }
         }
         true
