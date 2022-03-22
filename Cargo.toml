@@ -6,5 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+# serde = { version="1.0.136", features = ["derive"] }
+# rand = "0.8.5"
 relm4 = { version = "0.4", features = ["macros", "libadwaita"] }
 relm4-components = "0.4"
+dsp = "0.8.1"

@@ -3,7 +3,8 @@ use adw::{
     CenteringPolicy, ViewStackPage
 };
 use gtk::{
-    prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt, DrawingAreaExt, DrawingAreaExtManual},
+    prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
+              DrawingAreaExt, DrawingAreaExtManual},
     Orientation,
 };
 use relm4::{adw, gtk, send, AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets};
@@ -11,6 +12,7 @@ use relm4::{adw, gtk, send, AppUpdate, RelmComponent, ComponentUpdate, Model, Re
 // use relm4::factory::FactoryVecDeque;
 
 use std::f64::consts::PI;
+use dsp::generator::noise;
 
 // -- Entities
 
@@ -64,6 +66,7 @@ impl ComponentUpdate<AppModel> for ChartModel {
         parent_sender: Sender<AppMsg>,
     ) {
         match msg {
+            // ChartMsg::Demo => {}
             ChartMsg::Draw => {
                 // Draw
             }
@@ -87,22 +90,28 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
             append: area = &gtk::DrawingArea {
                 set_vexpand: true,
                 set_hexpand: true,
-                set_content_width: 500,
-                set_content_height: 500,
-                set_draw_func: |_, cr, _, _| {
+                set_content_width: 1000,
+                set_content_height: 600,
+
+                // da is &DrawingArea
+                // cr is Cairo Context
+                //
+                // TODO separate draw_func: now closure for testing
+                set_draw_func: |da, cr, _, _| {
                     // TODO replace with sinusoidal opening demo
                     // text example adapted from:
                     // https://github.com/gtk-rs/gtk3-rs/blob/master/examples/cairo_test/main.rs
 
                     // TODO Study how this scaling function works exactly
-                    cr.scale(500f64, 500f64);
+                    // cr.scale(500f64, 500f64);
+                    // cr.scale(2f64, 2f64);
 
                     // Yellow background
                     cr.set_source_rgb(250.0 / 255.0, 224.0 / 255.0, 55.0 / 255.0);
                     cr.paint().expect("Invalid cairo surface state");
 
                     // Line drawer settings
-                    cr.set_line_width(0.03);
+                    cr.set_line_width(1.0);
                     cr.set_source_rgb(0.3, 0.3, 0.3);
 
                     // Draw rectangle
@@ -110,8 +119,49 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
                     // cr.stroke().expect("Invalid cairo surface state");
 
                     // Draw circle
-                    cr.arc(0.6, 0.6, 0.4, 0.0, PI * 2.);
-                    cr.stroke().expect("Invalid cairo surface state");
+                    // cr.arc(0.6, 0.6, 0.4, 0.0, PI * 2.);
+                    // cr.stroke().expect("Invalid cairo surface state");
+
+                    let signal = dsp::generator::noise(1024, 20.0, 8);
+                    let peaks = signal.data;
+
+                    // CLASSIC 1999 PLOTTING ITERATION STRATEGY
+                    // let mut peaks = vec![5.0; 1024 as usize];
+                    // println!("vec is: {:?}", peaks);
+
+                    let w = da.content_width();
+                    let h = da.content_height();
+                    let verti_center = h/2;
+                    let horiz_center = w/2;
+
+                    // let theor_min = (peaks.iter().fold(f64::INFINITY, |a, &b| a.min(b.into()))) as f32;
+                    // let theor_max = (peaks.iter().fold(f64::INFINITY, |a, &b| a.max(b.into()))) as f32;
+                    // let verti_center = h as f32 / (theor_max-theor_min);
+
+                    // let theor_min = 0.0;
+                    // let theor_max = 100.0;
+
+                    let x_incr = (w as f32) / 1024.0;
+                    // let y_incr = (h as f32) / (theor_max-theor_min);
+                    // println!("y_incr is: {}", y_incr);
+
+                    let mut x1 = 0.0 as f32;
+
+                    cr.move_to(x1.into(), 0.0);
+
+                    for point in 0..1024 {
+                        // pointer
+                        let p_from = verti_center as f32 + peaks[point]; // * y_incr;
+                        let p_to = verti_center as f32 - peaks[point]; // * y_incr;
+                        let x2 = x1 as f32 + (1.0 as f32 *x_incr);
+                        // println!("p_from {}, p_to {}", p_from, p_to);
+                        cr.move_to(x1.into(), p_from.into());
+                        cr.line_to(x2.into(), p_to.into());
+                        x1=x2;
+                    }
+
+                    cr.set_source_rgba(0.0, 0.0, 0.0, 1.0);
+                    cr.stroke().expect("invalid cairo surface state");
                 },
 
                 connect_resize(sender) => move |_, x, y| {
