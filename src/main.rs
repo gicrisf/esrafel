@@ -5,9 +5,9 @@ use adw::{
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt},
+              DrawingAreaExt, Cast},
     Orientation,
-    cairo::{Context, Operator},
+    cairo::{Context},
 };
 
 use relm4::{
@@ -15,6 +15,16 @@ use relm4::{
     AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets,
     // factory::FactoryVecDeque,
 };
+
+use relm4_components::{
+    open_button::{
+        OpenButtonConfig, OpenButtonModel, OpenButtonParent, OpenButtonSettings,
+    },
+    open_dialog::{OpenDialogConfig, OpenDialogSettings},
+    ParentWindow,
+};
+
+use std::path::PathBuf;
 
 mod draw;
 use draw::draw_classic;
@@ -134,6 +144,39 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
     }  // pre view
 }
 
+// -- Open Button
+
+struct OpenFileButtonConfig {}
+
+impl OpenDialogConfig for OpenFileButtonConfig {
+    type Model = AppModel;
+
+    fn open_dialog_config(_model: &Self::Model) -> OpenDialogSettings {
+        OpenDialogSettings {
+            accept_label: "Open",
+            cancel_label: "Cancel",
+            create_folders: true,
+            is_modal: true,
+            filters: Vec::new(),
+        }
+    }
+}
+
+impl OpenButtonConfig for OpenFileButtonConfig {
+    fn open_button_config(_model: &Self::Model) -> OpenButtonSettings {
+        OpenButtonSettings {
+            text: "Open file",
+            recently_opened_files: Some(".recent_files"),
+            max_recent_files: 10,
+        }
+    }
+}
+
+impl OpenButtonParent for AppModel {
+    fn open_msg(path: PathBuf) -> Self::Msg {
+        AppMsg::Open(path)
+    }
+}
 
 // -- AppModel
 
@@ -151,11 +194,13 @@ struct AppModel {
 
 enum AppMsg {
     Montecarlo(bool),
+    Open(PathBuf),
 }
 
 #[derive(relm4::Components)]
 struct AppComponents {
-    chart: RelmComponent<ChartModel, AppModel>
+    chart: RelmComponent<ChartModel, AppModel>,
+    open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
 }
 
 impl Model for AppModel {
@@ -169,6 +214,9 @@ impl AppUpdate for AppModel {
         match msg {
             AppMsg::Montecarlo(v) => {
                 self.montecarlo = v;
+            }  // Montecarlo
+            AppMsg::Open(path) => {
+                println!("* Open file at {:?} *", path);
             }
         }
         true
@@ -186,6 +234,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
             set_content = Some(&gtk::Box) {
                 set_orientation: gtk::Orientation::Vertical,
                 append = &adw::HeaderBar {
+                    pack_start: components.open_button.root_widget(),
                     set_title_widget: title = Some(&adw::ViewSwitcherTitle) {
                         set_title: "Esrafel",
                         set_stack: Some(&stack),
@@ -250,6 +299,12 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .bind_property("title-visible", &bottom_bar, "reveal")
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
+    }
+}
+
+impl ParentWindow for AppWidgets {
+    fn parent_window(&self) -> Option<gtk::Window> {
+        Some(self.main_window.clone().upcast::<gtk::Window>())
     }
 }
 
