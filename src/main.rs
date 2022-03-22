@@ -31,22 +31,7 @@ use std::io::Read;
 mod drawers;
 mod esr_io;
 
-// -- Entities
-
-pub struct Param {
-    pub val: f64,  // Value; starts with 0.0
-    pub var: f64,  // Variation; starts with: 0.0
-}
-
-pub struct Radical {
-    pub lwa: Param,  // Line width A
-    // pub lwb: Param,
-    // pub lwc: Param,
-    pub lrtz: Param,  // Lorentzian linewidth parameter (%)
-    pub amount: Param,  // Relative amount
-    pub dh1: Param,
-    // pub nucs: Vec<Nucleus>,
-}
+use drawers::{Line, Color};
 
 // -- Chart model
 
@@ -54,8 +39,11 @@ pub struct Radical {
 struct ChartModel {
     width: f64,
     height: f64,
-    line: Vec<f64>,  // TODO add Some option etc
-    empirical_line: Option<Vec<f64>>,
+    background_color: Color,
+    theoretical_color: Color,
+    empirical_color: Color,
+    theoretical_line: Option<Line>,
+    empirical_line: Option<Line>,
 }
 
 enum ChartMsg {
@@ -75,7 +63,13 @@ impl ComponentUpdate<AppModel> for ChartModel {
         ChartModel {
             width: 1000.0,
             height: 600.0,
-            line: dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>(),
+            // TODO all colors in Theme struct
+            background_color: Color::rgb(250.0, 224.0, 55.0),
+            theoretical_color: Color::rgb(0.3, 0.3, 0.3),
+            empirical_color: Color::rgb(0.3, 0.3, 0.3),
+            theoretical_line: Some(
+                Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
+            ),
             empirical_line: None,
         }
     }
@@ -94,10 +88,12 @@ impl ComponentUpdate<AppModel> for ChartModel {
                 // If montecarlo
                 // Just get data from the App model with the simulator running
                 // self.line = dsp::generator::noise(1024, 20.0, 8).data;
-                self.line = dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>();
+                self.theoretical_line = Some(
+                    Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
+                );
             }
             ChartMsg::AddEmpirical(v) => {
-                self.empirical_line = Some(v);
+                self.empirical_line = Some(Line::new(v));
             }
             ChartMsg::Resize((x, y)) => {
                 self.width = x as f64;
@@ -146,11 +142,14 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
     // This draws in loop
     fn pre_view() {
         let cr = self.handler.get_context().unwrap();
-        drawers::paint_bg(&cr);
+        drawers::paint_bg(&cr, &model.background_color);
         if let Some(v) = &model.empirical_line {
-            drawers::draw_classic(&cr, v, model.width, model.height);
+            drawers::draw_classic(&cr, &v, model.width, model.height, &model.empirical_color);
         };
-        drawers::draw_noise(&cr, &model.line, model.width, model.height);
+
+        if let Some(v) = &model.theoretical_line {
+            drawers::draw_noise(&cr, &v, model.width, model.height, &model.theoretical_color);
+        };
     }  // pre view
 }
 
@@ -336,7 +335,7 @@ fn main() {
         points: 1024.0,
         sweep: 100.0,
         // params: FactoryVecDeque::new(),
-        sigma: 1e+20,
+        sigma: 1E+20,
         iters: 0,
         montecarlo: false,
     };
