@@ -54,11 +54,13 @@ pub struct Radical {
 struct ChartModel {
     width: f64,
     height: f64,
-    line: Vec<f32>,  // TODO add Some option etc
+    line: Vec<f64>,  // TODO add Some option etc
+    empirical_line: Option<Vec<f64>>,
 }
 
 enum ChartMsg {
     Update,
+    AddEmpirical(Vec<f64>),
     Resize((i32, i32)),
 }
 
@@ -73,7 +75,8 @@ impl ComponentUpdate<AppModel> for ChartModel {
         ChartModel {
             width: 1000.0,
             height: 600.0,
-            line: dsp::generator::noise(1024, 20.0, 8).data,
+            line: dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>(),
+            empirical_line: None,
         }
     }
 
@@ -90,7 +93,11 @@ impl ComponentUpdate<AppModel> for ChartModel {
                 // Draw
                 // If montecarlo
                 // Just get data from the App model with the simulator running
-                self.line = dsp::generator::noise(1024, 20.0, 8).data;
+                // self.line = dsp::generator::noise(1024, 20.0, 8).data;
+                self.line = dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>();
+            }
+            ChartMsg::AddEmpirical(v) => {
+                self.empirical_line = Some(v);
             }
             ChartMsg::Resize((x, y)) => {
                 self.width = x as f64;
@@ -102,8 +109,6 @@ impl ComponentUpdate<AppModel> for ChartModel {
 
 // -- Chart Widgets
 
-
-
 #[relm4::widget]
 impl Widgets<ChartModel, AppModel> for ChartWidgets {
     view! {
@@ -114,8 +119,6 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
             append: area = &gtk::DrawingArea {
                 set_vexpand: true,
                 set_hexpand: true,
-
-                // TODO Make flexible area
                 set_content_width: 1000,
                 set_content_height: 600,
 
@@ -140,9 +143,14 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
         });
     }  // post init
 
+    // This draws in loop
     fn pre_view() {
         let cr = self.handler.get_context().unwrap();
-        drawers::draw_classic(&cr, &model.line, model.width, model.height);
+        drawers::paint_bg(&cr);
+        if let Some(v) = &model.empirical_line {
+            drawers::draw_classic(&cr, v, model.width, model.height);
+        };
+        drawers::draw_noise(&cr, &model.line, model.width, model.height);
     }  // pre view
 }
 
@@ -212,7 +220,7 @@ impl Model for AppModel {
 }
 
 impl AppUpdate for AppModel {
-    fn update(&mut self, msg: AppMsg, _components: &AppComponents, _sender: Sender<AppMsg>) -> bool {
+    fn update(&mut self, msg: AppMsg, components: &AppComponents, _sender: Sender<AppMsg>) -> bool {
         match msg {
             AppMsg::Montecarlo(v) => {
                 self.montecarlo = v;
@@ -225,9 +233,9 @@ impl AppUpdate for AppModel {
                 // println!("{}", data);
 
                 // TODO manage errors in reading files!
-                self.empirical = Some(esr_io::get_from_ascii(&data));
-                // TODO Tell to Chart
-                ChartMsg::Update;
+                // self.empirical = Some(esr_io::get_from_ascii(&data));
+                components.chart.send(ChartMsg::AddEmpirical(esr_io::get_from_ascii(&data)))
+                                .expect("Failed sending empirical spectrum to the Chart");
             }
         }
         true
