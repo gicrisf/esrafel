@@ -1,6 +1,8 @@
 use crate::Context;
 use ordered_float::NotNan;
 
+// TODO Use gdk4::RGBA instead!
+// https://gtk-rs.org/gtk4-rs/stable/latest/docs/gdk4/struct.RGBA.html
 #[derive(Default)]
 pub struct Color {
     r: f64,
@@ -16,9 +18,7 @@ impl Color {
             b: b / 255.0,
         }
     }
-    // TODO: hex
 
-    // Palettes TODO mother function palette
     pub fn original(name: &str) -> Color {
         match name {
             "DarkCyan" => Color::rgb(1.0, 46.0, 64.0),
@@ -89,68 +89,83 @@ pub fn paint_bg(cr: &Context, color: &Color) {
     cr.paint().expect("Invalid cairo surface state");
 }
 
-// This works with spectra and doesn't with the noise
-// CLASSIC 1999 PLOTTING ITERATION STRATEGY
+// CLASSIC DOS 1999 PLOTTING ITERATION STRATEGY
+//
+// SIM99.C By Marco Lucarini and Gian Franco Pedulli
+// Dipartimento di Chimica Organica, Facoltà di Farmacia Università di Bologna.
+//
+// ```clang
+// spettro(float p[],float pm[],int init, int fine, ...)
+// {
+// float yincr,xincr,x1,x2,max,min;
+// int i,p1,p2;
+// ...
+// // Find min/max through a simple iteration
+// ...
+// xincr=630.0/((float) (fine-init));
+// yincr=440.0/(max-min);
+// setviewport(5,20,635,460,1);
+// ...
+// x1=0.0;
+// p1=(int) ((max-p[init]*molt)*yincr);
+// for (i=init+1;i<=fine;i++)
+// {
+// p2=(int) ((max-p[i]*molt)*yincr);
+// x2=x1+xincr;
+// line(x1,p1,x2,p2);
+// x1=x2;
+// p1=p2;
+// }  // ./for
+// }  // ./spettro
+// ```
+
 pub fn draw_classic(cr: &Context, line: &Line, w: f64, h: f64, color: &Color) {
-    let x_incr = (w) / (line.length as f64);
-    let y_incr = (h) / (line.max-line.min);
-    // println!("y_incr is: {}", y_incr);
+    cr.set_line_width(1.0);
+    let (a, b, c) = color.as_tuple();
+    cr.set_source_rgb(a, b, c);
 
-    // x coord
+    let x_incr = w / (line.length as f64);
+    let y_incr = h / (line.max-line.min);
+
+    // Move to initial x, y coords
     let mut x1 = 0.0;
-
-    // y coord
     let mut p_from = (line.max - line.data[0]) *y_incr;
-
     cr.move_to(x1, p_from);
 
+    // Scale and plot line
     for point in 0..(line.length-1) {
-        // let p_from = verti_center as f32 + peaks[point]; // * y_incr;
-        // let p_to = verti_center as f32 - peaks[point]; // * y_incr;
         let p_to = (line.max - line.data[point+1])*y_incr;
-        // let x2 = x1 + (1.0 *x_incr);
         let x2 = x1 + x_incr;
-        // println!("p_from {}, p_to {}", p_from, p_to);
         cr.move_to(x1, p_from);
         cr.line_to(x2, p_to);
         x1=x2;
         p_from=p_to;
     }
 
-    cr.set_line_width(1.0);
-    let (a, b, c) = color.as_tuple();
-    cr.set_source_rgb(a, b, c);
     cr.stroke().expect("invalid cairo surface state");
 }
 
 
 pub fn draw_noise(cr: &Context, line: &Line, w: f64, h: f64, color: &Color) {
-    // Line drawer settings
     cr.set_line_width(1.0);
-    cr.set_source_rgb(0.3, 0.3, 0.3);
+    let (a, b, c) = color.as_tuple();
+    cr.set_source_rgb(a, b, c);
 
     let verti_center = h/2.0;
     let horiz_center = w/2.0;
-
     let x_incr = w / (line.length as f64);
-    // let y_incr = (h as f32) / (theor_max-theor_min);
-    // println!("y_incr is: {}", y_incr);
 
-    let mut x1 = 0.0;
+    let mut pointer = 0.0;
+    cr.move_to(pointer, 0.0);
 
-    cr.move_to(x1, 0.0);
-
-    for point in 0..1024 {
-        let p_from = verti_center + line.data[point]; // * y_incr;
-        let p_to = verti_center - line.data[point]; // * y_incr;
-        let x2 = x1 + (1.0 *x_incr);
-        // println!("p_from {}, p_to {}", p_from, p_to);
-        cr.move_to(x1, p_from);
+    for point in 0..(line.length) {
+        let p_from = verti_center + line.data[point];
+        let p_to = verti_center - line.data[point];
+        let x2 = pointer + (1.0 *x_incr);
+        cr.move_to(pointer, p_from);
         cr.line_to(x2, p_to);
-        x1=x2;
+        pointer=x2;
     }
 
-    let (a, b, c) = color.as_tuple();
-    cr.set_source_rgb(a, b, c);
     cr.stroke().expect("invalid cairo surface state");
 }
