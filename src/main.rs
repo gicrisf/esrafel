@@ -30,6 +30,7 @@ use std::io::Read;
 
 mod drawers;
 mod esr_io;
+mod sim;
 
 use drawers::{Line, Color};
 
@@ -63,12 +64,12 @@ impl ComponentUpdate<AppModel> for ChartModel {
         ChartModel {
             width: 1000.0,
             height: 600.0,
-            // TODO all colors in Theme struct
             background_color: Color::rgb(250.0, 224.0, 55.0),
             theoretical_color: Color::rgb(0.3, 0.3, 0.3),
             empirical_color: Color::rgb(0.3, 0.3, 0.3),
             theoretical_line: Some(
-                Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
+                // Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
+                Line::new(sim::calcola()),
             ),
             empirical_line: None,
         }
@@ -84,13 +85,15 @@ impl ComponentUpdate<AppModel> for ChartModel {
         match msg {
             // ChartMsg::Demo => {}
             ChartMsg::Update => {
-                // Draw
-                // If montecarlo
-                // Just get data from the App model with the simulator running
+
                 // self.line = dsp::generator::noise(1024, 20.0, 8).data;
+
+                /*
                 self.theoretical_line = Some(
                     Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
                 );
+                */
+
             }
             ChartMsg::AddEmpirical(v) => {
                 self.empirical_line = Some(Line::new(v));
@@ -134,8 +137,8 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
         handler.init(&area);
 
         std::thread::spawn(move || loop {
-            std::thread::sleep(std::time::Duration::from_millis(20));
-            send!(sender, ChartMsg::Update);
+            // std::thread::sleep(std::time::Duration::from_millis(20));
+            // send!(sender, ChartMsg::Update);
         });
     }  // post init
 
@@ -148,7 +151,8 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
         };
 
         if let Some(v) = &model.theoretical_line {
-            drawers::draw_noise(&cr, &v, model.width, model.height, &model.theoretical_color);
+            // drawers::draw_noise(&cr, &v, model.width, model.height, &model.theoretical_color);
+            drawers::draw_classic(&cr, &v, model.width, model.height, &model.theoretical_color);
         };
     }  // pre view
 }
@@ -193,11 +197,11 @@ impl OpenButtonParent for AppModel {
 struct AppModel {
     empirical: Option<Vec<f64>>,
     theoretical: Option<Vec<f64>>,
-    points: f64,
-    sweep: f64,
+    // points: f64,
+    // sweep: f64,
     // params: FactoryVecDeque<Radical>,
-    sigma: f64,
-    iters: usize,
+    // sigma: f64,
+    // iters: usize,
     montecarlo: bool,
 }
 
@@ -317,6 +321,15 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .bind_property("title-visible", &bottom_bar, "reveal")
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
+
+        // IDEA How to send from thread and through components
+        /*
+        let chart_sender = components.chart.sender();
+        std::thread::spawn(move || loop {
+            std::thread::sleep(std::time::Duration::from_millis(20));
+            send!(chart_sender, ChartMsg::Update);
+        });
+        */
     }
 }
 
@@ -331,12 +344,12 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
-        theoretical: None,
-        points: 1024.0,
-        sweep: 100.0,
+        theoretical: Some(sim::calcola()),
+        // points: 1024.0,
+        // sweep: 100.0,
         // params: FactoryVecDeque::new(),
-        sigma: 1E+20,
-        iters: 0,
+        // sigma: 1E+20,
+        // iters: 0,
         montecarlo: false,
     };
     let app = RelmApp::new(model);
