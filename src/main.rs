@@ -5,7 +5,7 @@ use adw::{
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt, Cast},
+              DrawingAreaExt, Cast, CheckButtonExt, PopoverExt},
     Orientation, AccessibleRole::Separator,
     cairo::{Context},
 };
@@ -284,6 +284,34 @@ impl Widgets<AppModel, ()> for AppWidgets {
                     set_title_widget: title = Some(&adw::ViewSwitcherTitle) {
                         set_title: "Esrafel",
                         set_stack: Some(&stack),
+                    },
+                    pack_end: menu_button = &gtk::MenuButton::new() {
+                        set_icon_name: "open-menu-symbolic",
+                        set_popover: popover = Some(&gtk::Popover) {
+                            set_child = Some(&gtk::Box) {
+                                set_orientation: gtk::Orientation::Vertical,
+                                append: timer = &gtk::CheckButton::with_label("30s") {
+                                    connect_toggled(sender) => move |b| {
+                                        if b.is_active() {
+                                        }
+                                    }
+                                },
+                                append = &gtk::CheckButton::with_label("60s") {
+                                    set_group: Some(&timer),
+                                    connect_toggled(sender) => move |b| {
+                                        if b.is_active() {
+                                        }
+                                    }
+                                },
+                                append = &gtk::CheckButton::with_label("180s") {
+                                    set_group: Some(&timer),
+                                    connect_toggled(sender) => move |b| {
+                                        if b.is_active() {
+                                        }
+                                    }
+                                }
+                            }
+                        }  // ./popover
                     },
                     set_centering_policy: CenteringPolicy::Strict,
                 },
