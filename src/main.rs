@@ -50,6 +50,7 @@ struct ChartModel {
 enum ChartMsg {
     Update,
     AddEmpirical(Vec<f64>),
+    AddTheoretical(Vec<f64>),
     Resize((i32, i32)),
 }
 
@@ -67,11 +68,6 @@ impl ComponentUpdate<AppModel> for ChartModel {
             background_color: Color::rgb(250.0, 224.0, 55.0),
             theoretical_color: Color::rgb(0.3, 0.3, 0.3),
             empirical_color: Color::rgb(0.3, 0.3, 0.3),
-            // theoretical_line: Some(
-                // TODO Change to None and pass value from the main model
-                // Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
-                // Line::new(sim::calcola(vec![sim::Radical::probe()])),
-            // ),
             theoretical_line: None,
             empirical_line: None,
         }
@@ -88,8 +84,6 @@ impl ComponentUpdate<AppModel> for ChartModel {
             // ChartMsg::Demo => {}
             ChartMsg::Update => {
 
-                // self.line = dsp::generator::noise(1024, 20.0, 8).data;
-
                 /*
                 self.theoretical_line = Some(
                     Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
@@ -97,8 +91,13 @@ impl ComponentUpdate<AppModel> for ChartModel {
                 */
 
             }
+            // Maybe NewEmpirical is a more proper name?
+            // Maintaining this in the eventyality of a multi-spectrum option
             ChartMsg::AddEmpirical(v) => {
                 self.empirical_line = Some(Line::new(v));
+            }
+            ChartMsg::AddTheoretical(v) => {
+                self.theoretical_line = Some(Line::new(v));
             }
             ChartMsg::Resize((x, y)) => {
                 self.width = x as f64;
@@ -138,10 +137,13 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
         let mut handler = relm4::drawing::DrawHandler::new().unwrap();
         handler.init(&area);
 
-        std::thread::spawn(move || loop {
+        // Memo: you can spawn a thread here
+        //
+        // std::thread::spawn(move || loop {
             // std::thread::sleep(std::time::Duration::from_millis(20));
             // send!(sender, ChartMsg::Update);
-        });
+        // });
+
     }  // post init
 
     // This draws in loop
@@ -153,9 +155,14 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
         };
 
         if let Some(v) = &model.theoretical_line {
-            // drawers::draw_noise(&cr, &v, model.width, model.height, &model.theoretical_color);
             drawers::draw_classic(&cr, &v, model.width, model.height, &model.theoretical_color);
         };
+
+        // IDEA: if track!(&model.show_demo) ...
+        // Draw noise or choose your opening demo
+        // drawers::draw_noise(&cr, &v, model.width, model.height, &model.theoretical_color);
+        // A button for opening spectra/parameters would be better
+        // (Granite-style)
     }  // pre view
 }
 
@@ -198,17 +205,19 @@ impl OpenButtonParent for AppModel {
 #[derive(Default)]
 struct AppModel {
     empirical: Option<Vec<f64>>,
+    // TODO remove theor
     theoretical: Option<Vec<f64>>,
-    // points: f64,
-    // sweep: f64,
+    rads: Vec<sim::Radical>,
+    points: f64,
+    sweep: f64,
     // params: FactoryVecDeque<Radical>,
-    // sigma: f64,
-    // iters: usize,
+    sigma: f64,
+    iters: usize,
     montecarlo: bool,
 }
 
 enum AppMsg {
-    Montecarlo(bool),
+    ToggleMontecarlo(bool),
     Open(PathBuf),
 }
 
@@ -227,9 +236,24 @@ impl Model for AppModel {
 impl AppUpdate for AppModel {
     fn update(&mut self, msg: AppMsg, components: &AppComponents, _sender: Sender<AppMsg>) -> bool {
         match msg {
-            AppMsg::Montecarlo(v) => {
+            AppMsg::ToggleMontecarlo(v) => {
                 self.montecarlo = v;
-            }  // Montecarlo
+
+                // Run calculations
+                // TODO loop and move from here
+                if let Some(emp) = &self.empirical {
+                    // TODO reassign rads!
+                    let (newsigma, newrads) = sim::mc_fit(self.rads.clone(), &emp, self.points);
+
+                    // TODO: CONDITIONAL REASSIGNMENT of sigma here!
+                    println!("{:?}", newsigma);
+
+                    self.rads = newrads.clone();
+                    components.chart.send(ChartMsg::AddTheoretical(sim::calcola(newrads)))
+                                    .expect("Failed sending new theoretical spectrum to the Chart");
+
+                } // if
+            }  // ./Montecarlo
             AppMsg::Open(path) => {
                 println!("* Open file at {:?} *", path);
                 let mut data = String::new();
@@ -238,8 +262,13 @@ impl AppUpdate for AppModel {
                 // println!("{}", data);
 
                 // TODO manage errors in reading files!
-                // self.empirical = Some(esr_io::get_from_ascii(&data));
-                components.chart.send(ChartMsg::AddEmpirical(esr_io::get_from_ascii(&data)))
+                // TODO choose right function basing on the extension
+                // match -> ascii -> json -> esr (etc.)
+                let new_empirical_vec = esr_io::get_from_ascii(&data);
+
+                // Store in both AppModel and ChartModel?
+                self.empirical = Some(new_empirical_vec.clone());
+                components.chart.send(ChartMsg::AddEmpirical(new_empirical_vec))
                                 .expect("Failed sending empirical spectrum to the Chart");
             }
         }
@@ -297,14 +326,13 @@ impl Widgets<AppModel, ()> for AppWidgets {
 
                         // `component!` seems like it's still a not supported macro?
                         // append: component!(Some(chart)),
-
                         // ALERT, the next line couldn't work in other branches
                         append: components.chart.root_widget(),
                         append = &gtk::ToggleButton {
                             set_label: "Run MonteCarlo",
                             set_active: model.montecarlo,
                             connect_clicked(sender) => move |v| {
-                                send!(sender, AppMsg::Montecarlo(v.is_active()))
+                                send!(sender, AppMsg::ToggleMontecarlo(v.is_active()))
                             }
                         },
                     } -> plot_page: ViewStackPage {
@@ -347,12 +375,13 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
-        theoretical: Some(sim::calcola(vec![sim::Radical::probe()])),
-        // points: 1024.0,
-        // sweep: 100.0,
+        theoretical: None,
+        rads: vec![sim::Radical::var_probe()],
+        points: 1024.0,
+        sweep: 100.0,
         // params: FactoryVecDeque::new(),
-        // sigma: 1E+20,
-        // iters: 0,
+        sigma: 1E+20,
+        iters: 0,
         montecarlo: false,
     };
     let app = RelmApp::new(model);

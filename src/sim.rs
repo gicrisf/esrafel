@@ -77,6 +77,15 @@ impl Radical {
         rad.nucs.push(Nucleus::set(1.0, 14.0, 1.0));
         rad
     }
+
+    pub fn var_probe() -> Radical {
+        let mut rad = Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new());
+        rad.nucs.push(Nucleus::set(1.0, 14.0, 1.0));
+        rad.lwa.var = 1.0;
+        rad.lrtz.var = 1.0;
+        rad.amount.var = 10.0;
+        rad
+    } // var probe
 }
 
 // Calculate teorical spectra
@@ -240,7 +249,7 @@ fn check_pars(mut rad: Radical) -> Radical {
 }
 
 // Strict porting of classic Montecarlo method 1999
-pub fn mc_fit(rads: Vec<Radical>, mut exp: Vec<f64>, points: f64) -> (f64, Vec<f64>) {
+pub fn mc_fit(rads: Vec<Radical>, exp: &Vec<f64>, points: f64) -> (f64, Vec<Radical>) {
     // let iters;
     // let sigma
 
@@ -253,7 +262,7 @@ pub fn mc_fit(rads: Vec<Radical>, mut exp: Vec<f64>, points: f64) -> (f64, Vec<f
 
     let (mut somma, mut somma1, mut somma2): (f64, f64, f64) = (0.0, 0.0, 0.0);
     let start: usize = 1;
-    let fine: usize = points as usize + 1;
+    let fine: usize = points as usize;  // TODO check this one
 
     // TODO externalize iteration count
     // self.iters+=1;
@@ -293,15 +302,10 @@ pub fn mc_fit(rads: Vec<Radical>, mut exp: Vec<f64>, points: f64) -> (f64, Vec<f
         mc_rads.push(rad);
     }  // for rad in rads
 
-    // TODO: CONDITIONAL REASSIGNMENT!
     // sigma = newsigma;
 
     // Push in model.theoretical
     // calcola(&rads);
 
-    // Potrei restituire una tupla con newsigma e newteor
-    // Conditional reassignment si può esternalizzare
-    // Mantenere così un approccio strettamente funzionale
-
-    (newsigma, calcola(rads))
+    (newsigma, mc_rads)
 }  // mc
