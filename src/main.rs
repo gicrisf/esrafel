@@ -67,10 +67,12 @@ impl ComponentUpdate<AppModel> for ChartModel {
             background_color: Color::rgb(250.0, 224.0, 55.0),
             theoretical_color: Color::rgb(0.3, 0.3, 0.3),
             empirical_color: Color::rgb(0.3, 0.3, 0.3),
-            theoretical_line: Some(
+            // theoretical_line: Some(
+                // TODO Change to None and pass value from the main model
                 // Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
-                Line::new(sim::calcola()),
-            ),
+                // Line::new(sim::calcola(vec![sim::Radical::probe()])),
+            // ),
+            theoretical_line: None,
             empirical_line: None,
         }
     }
@@ -295,6 +297,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
 
                         // `component!` seems like it's still a not supported macro?
                         // append: component!(Some(chart)),
+
                         // ALERT, the next line couldn't work in other branches
                         append: components.chart.root_widget(),
                         append = &gtk::ToggleButton {
@@ -344,7 +347,7 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
-        theoretical: Some(sim::calcola()),
+        theoretical: Some(sim::calcola(vec![sim::Radical::probe()])),
         // points: 1024.0,
         // sweep: 100.0,
         // params: FactoryVecDeque::new(),

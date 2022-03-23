@@ -1,6 +1,9 @@
+use rand::{thread_rng, Rng};
+
 // TODO use better var names
 // Temporarily maintaining legacy name to make easier comparison
 
+#[derive(Clone)]
 pub struct Param {
     pub val: f64,  // Value; starts with 0.0
     pub var: f64,  // Variation; starts with: 0.0
@@ -10,8 +13,21 @@ impl Param {
     pub fn set(val: f64, var: f64) -> Param {
         Param { val, var, }
     }
+
+    pub fn randomize(&self) -> Param {
+        if self.var != 0.0 {
+            let mut rng = thread_rng();
+            let random: f64 = rng.gen();  // random number in range [0, 1)
+            let rnd = 2.0*random-1.0;
+            let new_val = self.val + rnd * self.var;
+            return Param { val: new_val, var: self.var }
+        } else {
+            return Param { val: self.val, var: self.var }
+        }
+    }
 }
 
+#[derive(Clone)]
 pub struct Nucleus {
     pub spin: Param,  // Nuclear spin;
     pub hpf: Param,  // Hyperfine constant;
@@ -28,6 +44,7 @@ impl Nucleus {
     }
 }
 
+#[derive(Clone)]
 pub struct Radical {
     pub lwa: Param,  // Line width A
     // pub lwb: Param,
@@ -64,13 +81,16 @@ impl Radical {
 
 // Calculate teorical spectra
 // pub fn calcola(rads: Vec<Radical>, sweep: f64, points: f64, sigma: f64) -> Vec<f64> {
-pub fn calcola() -> Vec<f64> {
+pub fn calcola(rads: Vec<Radical>) -> Vec<f64> {
     let sweep: f64 = 100.0;
     let points: f64 = 1024.0;
     let sigma: f64 = 1E+20;
-    let iters: usize = 0;
-    let mut rads = Vec::new();
-    rads.push(Radical::electron());
+    // let iters: usize = 0;
+    //
+    // TODO erase those testing functions
+    // let mut rads = Vec::new();
+    // rads.push(Radical::probe());
+    //
     // let sweep get from model
     // let sweep = self.sweep.lock().unwrap();
 
@@ -205,6 +225,83 @@ pub fn calcola() -> Vec<f64> {
         }  // for (j=1;j<=punti;j++)
     }
 
-    // println!("{:?}", newteor);
     newteor  // return
 }  // fn calcola
+
+// MONTECARLO
+
+// Reset potentially aberrant value returned by MC function;
+fn check_pars(mut rad: Radical) -> Radical {
+    if rad.lwa.val < 0.0 { rad.lwa.val = 0.0 };
+    if rad.lrtz.val < 0.0 { rad.lrtz.val = 0.0 };
+    if rad.amount.val < 0.0 { rad.amount.val = 0.0 };
+    if rad.lrtz.val > 100.0 { rad.lrtz.val = 100.0 };
+    rad
+}
+
+// Strict porting of classic Montecarlo method 1999
+pub fn mc_fit(rads: Vec<Radical>, mut exp: Vec<f64>, points: f64) -> (f64, Vec<f64>) {
+    // let iters;
+    // let sigma
+
+    // Basta prendere quello gia' calcolato, no?
+    // Questo calcolo mi pare superfluo
+    //
+    // Posso fare a meno di clonare qui?
+    // Magari passare solo il pointer
+    let mut newteor = calcola(rads.clone());
+
+    let (mut somma, mut somma1, mut somma2): (f64, f64, f64) = (0.0, 0.0, 0.0);
+    let start: usize = 1;
+    let fine: usize = points as usize + 1;
+
+    // TODO externalize iteration count
+    // self.iters+=1;
+
+    // Randomize Par
+
+    // Start MC
+    for j in start..fine {
+        somma1 += newteor[j].powi(2);
+        somma2 += exp[j].abs() * newteor[j].abs();
+    }
+
+    let norma: f64;
+    if somma1 == 0.0 { norma = 0.0 } else { norma = somma2/somma1 };
+
+    for j in start..fine {
+        newteor[j] *= norma;
+        let diff = (exp[j] - newteor[j]).powi(2);
+        somma+=diff;
+    }
+
+    let mut mc_rads = Vec::new();
+    let newsigma =(somma/(fine-start) as f64).sqrt();
+
+    for mut rad in (&rads).to_vec() {
+        rad.lwa = rad.lwa.randomize();
+        rad.amount = rad.amount.randomize();
+        rad.lrtz = rad.lrtz.randomize();
+        rad.dh1 = rad.dh1.randomize();
+
+        for mut nuc in rad.nucs.clone() {
+            nuc.hpf = nuc.hpf.randomize();
+        }
+
+        // check this out
+        rad = check_pars(rad);
+        mc_rads.push(rad);
+    }  // for rad in rads
+
+    // TODO: CONDITIONAL REASSIGNMENT!
+    // sigma = newsigma;
+
+    // Push in model.theoretical
+    // calcola(&rads);
+
+    // Potrei restituire una tupla con newsigma e newteor
+    // Conditional reassignment si può esternalizzare
+    // Mantenere così un approccio strettamente funzionale
+
+    (newsigma, calcola(rads))
+}  // mc

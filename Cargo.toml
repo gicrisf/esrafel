@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 # serde = { version="1.0.136", features = ["derive"] }
-# rand = "0.8.5"
+rand = "0.8.5"
 relm4 = { version = "0.4", features = ["macros", "libadwaita"] }
 relm4-components = "0.4"
 dsp = "0.8.1"
