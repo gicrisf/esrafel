@@ -1,12 +1,12 @@
 use adw::{
-    prelude::{AdwApplicationWindowExt},
+    prelude::{AdwApplicationWindowExt, BinExt},
     CenteringPolicy, ViewStackPage
 };
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
               DrawingAreaExt, Cast},
-    Orientation,
+    Orientation, AccessibleRole::Separator,
     cairo::{Context},
 };
 
@@ -48,7 +48,6 @@ struct ChartModel {
 }
 
 enum ChartMsg {
-    Update,
     AddEmpirical(Vec<f64>),
     AddTheoretical(Vec<f64>),
     Resize((i32, i32)),
@@ -82,15 +81,7 @@ impl ComponentUpdate<AppModel> for ChartModel {
     ) {
         match msg {
             // ChartMsg::Demo => {}
-            ChartMsg::Update => {
 
-                /*
-                self.theoretical_line = Some(
-                    Line::new(dsp::generator::noise(1024, 20.0, 8).data.iter().map(|&x| x as f64).collect::<Vec<_>>())
-                );
-                */
-
-            }
             // Maybe NewEmpirical is a more proper name?
             // Maintaining this in the eventyality of a multi-spectrum option
             ChartMsg::AddEmpirical(v) => {
@@ -205,8 +196,6 @@ impl OpenButtonParent for AppModel {
 #[derive(Default)]
 struct AppModel {
     empirical: Option<Vec<f64>>,
-    // TODO remove theor
-    theoretical: Option<Vec<f64>>,
     rads: Vec<sim::Radical>,
     points: f64,
     sweep: f64,
@@ -252,6 +241,7 @@ impl AppUpdate for AppModel {
                     components.chart.send(ChartMsg::AddTheoretical(sim::calcola(&self.rads)))
                                     .expect("Failed sending new theoretical spectrum to the Chart");
 
+                    // println!("iters: {}", self.iters);
                 } // if empirical exists
                 } // if montecarlo toggled
             }
@@ -263,7 +253,6 @@ impl AppUpdate for AppModel {
                 let mut data = String::new();
                 let mut f = File::open(path).expect("Unable to open file");
                 f.read_to_string(&mut data).expect("Unable to read string");
-                // println!("{}", data);
 
                 // TODO manage errors in reading files!
                 // TODO choose right function basing on the extension
@@ -326,19 +315,31 @@ impl Widgets<AppModel, ()> for AppWidgets {
                         set_orientation: Orientation::Vertical,
                         set_hexpand: false,
 
-                        // TODO choose if adding plot-related status bar here
-
                         // `component!` seems like it's still a not supported macro?
                         // append: component!(Some(chart)),
                         // ALERT, the next line couldn't work in other branches
-                        append: components.chart.root_widget(),
-                        append = &gtk::ToggleButton {
-                            set_label: "Run MonteCarlo",
-                            set_active: model.montecarlo,
-                            connect_clicked(sender) => move |v| {
-                                send!(sender, AppMsg::ToggleMontecarlo(v.is_active()))
+                        append = &adw::Bin {
+                            set_child: Some(components.chart.root_widget()),
+                        },
+
+                        append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
+                            set_margin_bottom: 5,
+                        },
+
+                        append = &adw::Bin {
+                            set_margin_bottom: 5,
+                            set_child = Some(&gtk::CenterBox) {
+                                set_center_widget = Some(&gtk::ToggleButton) {
+                                    set_label: "Run MonteCarlo",
+                                    set_active: model.montecarlo,
+                                    connect_clicked(sender) => move |v| {
+                                        send!(sender, AppMsg::ToggleMontecarlo(v.is_active()))
+                                    }
+                                }
                             }
                         },
+
+
                     } -> plot_page: ViewStackPage {
                         set_icon_name: Some("media-playback-start-symbolic"),
                         set_needs_attention: watch!(model.montecarlo),
@@ -357,13 +358,11 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
 
+        // IDEA How to send from thread and through components
         // let chart_sender = components.chart.sender();
         std::thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(20));
-
             send!(sender, AppMsg::IterMontecarlo);
-
-            // IDEA How to send from thread and through components
             // send!(chart_sender, ChartMsg::Update);
         });
     }
@@ -380,7 +379,6 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
-        theoretical: None,
         rads: vec![sim::Radical::var_probe()],
         points: 1024.0,
         sweep: 100.0,
