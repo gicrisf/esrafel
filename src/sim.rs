@@ -90,7 +90,7 @@ impl Radical {
 
 // Calculate teorical spectra
 // pub fn calcola(rads: Vec<Radical>, sweep: f64, points: f64, sigma: f64) -> Vec<f64> {
-pub fn calcola(rads: Vec<Radical>) -> Vec<f64> {
+pub fn calcola(rads: &Vec<Radical>) -> Vec<f64> {
     let sweep: f64 = 100.0;
     let points: f64 = 1024.0;
     let sigma: f64 = 1E+20;
@@ -258,7 +258,7 @@ pub fn mc_fit(rads: Vec<Radical>, exp: &Vec<f64>, points: f64) -> (f64, Vec<Radi
     //
     // Posso fare a meno di clonare qui?
     // Magari passare solo il pointer
-    let mut newteor = calcola(rads.clone());
+    let mut newteor = calcola(&rads);
 
     let (mut somma, mut somma1, mut somma2): (f64, f64, f64) = (0.0, 0.0, 0.0);
     let start: usize = 1;

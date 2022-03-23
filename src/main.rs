@@ -66,7 +66,7 @@ impl ComponentUpdate<AppModel> for ChartModel {
             width: 1000.0,
             height: 600.0,
             background_color: Color::rgb(250.0, 224.0, 55.0),
-            theoretical_color: Color::rgb(0.3, 0.3, 0.3),
+            theoretical_color: Color::rgb(149.0, 25.0, 12.0),
             empirical_color: Color::rgb(0.3, 0.3, 0.3),
             theoretical_line: None,
             empirical_line: None,
@@ -217,6 +217,7 @@ struct AppModel {
 }
 
 enum AppMsg {
+    IterMontecarlo,
     ToggleMontecarlo(bool),
     Open(PathBuf),
 }
@@ -236,23 +237,26 @@ impl Model for AppModel {
 impl AppUpdate for AppModel {
     fn update(&mut self, msg: AppMsg, components: &AppComponents, _sender: Sender<AppMsg>) -> bool {
         match msg {
-            AppMsg::ToggleMontecarlo(v) => {
-                self.montecarlo = v;
-
-                // Run calculations
-                // TODO loop and move from here
-                if let Some(emp) = &self.empirical {
-                    // TODO reassign rads!
+            AppMsg::IterMontecarlo => {
+                // This is a fast and working solution, but a persistent iteration is not an elegant move
+                // Must search for another tracking method, but it's not a priority rn
+                if self.montecarlo {
+                    if let Some(emp) = &self.empirical {
                     let (newsigma, newrads) = sim::mc_fit(self.rads.clone(), &emp, self.points);
 
                     // TODO: CONDITIONAL REASSIGNMENT of sigma here!
-                    println!("{:?}", newsigma);
-
-                    self.rads = newrads.clone();
-                    components.chart.send(ChartMsg::AddTheoretical(sim::calcola(newrads)))
+                    // println!("{:?}", newsigma);
+                    self.sigma = newsigma;
+                    self.rads = newrads;
+                    self.iters+=1;
+                    components.chart.send(ChartMsg::AddTheoretical(sim::calcola(&self.rads)))
                                     .expect("Failed sending new theoretical spectrum to the Chart");
 
-                } // if
+                } // if empirical exists
+                } // if montecarlo toggled
+            }
+            AppMsg::ToggleMontecarlo(v) => {
+                self.montecarlo = v;
             }  // ./Montecarlo
             AppMsg::Open(path) => {
                 println!("* Open file at {:?} *", path);
@@ -322,7 +326,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                         set_orientation: Orientation::Vertical,
                         set_hexpand: false,
 
-                        // TODO choose if adding plot-related status here
+                        // TODO choose if adding plot-related status bar here
 
                         // `component!` seems like it's still a not supported macro?
                         // append: component!(Some(chart)),
@@ -353,14 +357,15 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
 
-        // IDEA How to send from thread and through components
-        /*
-        let chart_sender = components.chart.sender();
+        // let chart_sender = components.chart.sender();
         std::thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(20));
-            send!(chart_sender, ChartMsg::Update);
+
+            send!(sender, AppMsg::IterMontecarlo);
+
+            // IDEA How to send from thread and through components
+            // send!(chart_sender, ChartMsg::Update);
         });
-        */
     }
 }
 
