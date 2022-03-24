@@ -202,7 +202,7 @@ impl OpenButtonParent for AppModel {
 struct AppModel {
     empirical: Option<Vec<f64>>,
     rads: Vec<Radical>,
-    points: f64,
+    points: usize,  // TODO: use usize
     sweep: f64,
     sigma: f64,
     iters: usize,
@@ -213,6 +213,8 @@ enum AppMsg {
     IterMontecarlo,
     ToggleMontecarlo(bool),
     Open(PathBuf),
+    SetSweep(f64),
+    SetPoints(usize),  // then, temporarily convert to f64
 }
 
 #[derive(relm4::Components)]
@@ -236,7 +238,7 @@ impl AppUpdate for AppModel {
                 // Must search for another tracking method, but it's not a priority rn
                 if self.montecarlo {
                     if let Some(emp) = &self.empirical {
-                    let (newsigma, newrads) = sim::mc_fit(self.rads.clone(), &emp, self.points);
+                    let (newsigma, newrads) = sim::mc_fit(self.rads.clone(), &emp, self.points as f64);
 
                     // TODO: CONDITIONAL REASSIGNMENT of sigma here!
                     // println!("{:?}", newsigma);
@@ -268,6 +270,12 @@ impl AppUpdate for AppModel {
                 self.empirical = Some(new_empirical_vec.clone());
                 components.chart.send(ChartMsg::AddEmpirical(new_empirical_vec))
                                 .expect("Failed sending empirical spectrum to the Chart");
+            }
+            AppMsg::SetSweep(value) => {
+                self.sweep = value;
+            }
+            AppMsg::SetPoints(value) => {
+                self.points = value;
             }
         }
         true
@@ -338,17 +346,39 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                 set_orientation: gtk::Orientation::Horizontal,
                                 set_spacing: 10,
                                 set_homogeneous: true,
-                                // Could justify the text, but not gonna do this in a stage this early
                                 append: &gtk::Label::new(Some("Sweep")),
-                                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                                append: sweep_spin = &gtk::SpinButton {
+                                    set_adjustment: &gtk::Adjustment::new(
+                                        model.sweep,  // value
+                                        0.0,  // lower
+                                        100000000.0,  // upper
+                                        10.0,  // step_increment
+                                        100.0,  // page_increment
+                                        1000.0  // page_size
+                                    ),
+                                    connect_value_changed(sender) => move |val| {
+                                        send!(sender, AppMsg::SetSweep(val.value()))
+                                    }
+                                },
                             },
                             append: points_entry = &gtk::Box {
                                 set_orientation: gtk::Orientation::Horizontal,
                                 set_spacing: 10,
                                 set_homogeneous: true,
-                                // Could justify the text, but not gonna do this in a stage this early
                                 append: &gtk::Label::new(Some("Points")),
-                                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                                append: points_spin = &gtk::SpinButton {
+                                    set_adjustment: &gtk::Adjustment::new(
+                                        model.points as f64,  // value
+                                        0.0,  // lower
+                                        100000000.0,  // upper
+                                        1.0,  // step_increment
+                                        10.0,  // page_increment
+                                        1000.0  // page_size
+                                    ),
+                                    connect_value_changed(sender) => move |val| {
+                                        send!(sender, AppMsg::SetPoints(val.value_as_int() as usize));
+                                    }
+                                },
                             },
                             append = &gtk::Button {
                                 set_label: "Decrease",
@@ -439,7 +469,7 @@ fn main() {
     let model = AppModel {
         empirical: None,
         rads: vec![Radical::var_probe()],
-        points: 1024.0,
+        points: 1024,
         sweep: 100.0,
         sigma: 1E+20,
         iters: 0,
