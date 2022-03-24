@@ -1,6 +1,9 @@
 // use adw::prelude::BinExt;
 
-use gtk::prelude::{BoxExt, ButtonExt, OrientableExt};
+use gtk::{
+    prelude::{BoxExt, ButtonExt, OrientableExt},
+    Orientation,
+    };
 
 use relm4::{
     gtk, send,
@@ -9,11 +12,22 @@ use relm4::{
 };
 
 use crate::{AppModel, AppMsg};
-use crate::sim::Radical;
+// use crate::sim::Radical;
 
 struct Counter {
     value: u8,
-    rad: Radical,
+    lwa_val: f64,
+    lwa_var: f64,
+    // lwb_val: f64,
+    // lwb_var: f64,
+    // lwc_val: f64,
+    // lwc_var: f64,
+    lrtz_val: f64,
+    lrtz_var: f64,
+    amount_val: f64,
+    amount_var: f64,
+    dh1_val: f64,
+    dh1_var: f64,
 }
 
 #[derive(Debug)]
@@ -56,7 +70,14 @@ impl ComponentUpdate<AppModel> for ParamsModel {
             ParsMsg::AddFirst => {
                 self.counters.push_front(Counter {
                     value: self.received_messages,
-                    rad: Radical::electron(),
+                    lwa_val: 0.0,
+                    lwa_var: 0.0,
+                    lrtz_val: 50.0,
+                    lrtz_var: 0.0,
+                    amount_val: 100.0,
+                    amount_var: 0.0,
+                    dh1_val: 0.0,
+                    dh1_var: 0.0,
                 });
             }
             ParsMsg::RemoveLast => {
@@ -80,7 +101,14 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                         index.current_index(),
                         Counter {
                             value: self.received_messages,
-                            rad: Radical::electron(),
+                            lwa_val: 0.0,
+                            lwa_var: 0.0,
+                            lrtz_val: 50.0,
+                            lrtz_var: 0.0,
+                            amount_val: 100.0,
+                            amount_var: 0.0,
+                            dh1_val: 0.0,
+                            dh1_var: 0.0,
                         },
                     );
                 }
@@ -91,7 +119,14 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                         index.current_index() + 1,
                         Counter {
                             value: self.received_messages,
-                            rad: Radical::electron(),
+                            lwa_val: 0.0,
+                            lwa_var: 0.0,
+                            lrtz_val: 50.0,
+                            lrtz_var: 0.0,
+                            amount_val: 100.0,
+                            amount_var: 0.0,
+                            dh1_val: 0.0,
+                            dh1_var: 0.0,
                         },
                     );
                 }
@@ -110,32 +145,113 @@ impl FactoryPrototype for Counter {
 
     view! {
         gtk::Box {
-            set_orientation: gtk::Orientation::Horizontal,
-            set_spacing: 5,
-            append: counter_button = &gtk::Button {
-                set_label: watch!(&self.value.to_string()),
-                connect_clicked(sender, key) => move |_| {
-                    send!(sender, ParsMsg::CountAt(key.downgrade()));
+            set_orientation: gtk::Orientation::Vertical,
+            set_spacing: 15,
+            append: label_box = &gtk::Box {
+                set_orientation: gtk::Orientation::Vertical,
+                set_spacing: 5,
+                append: &gtk::Label::new(Some("Radical")),
+            },
+            append: entries_box = &gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 15,
+                append: par_general_box = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_spacing: 5,
+                    append: counter_button = &gtk::Button {
+                        set_label: watch!(&self.value.to_string()),
+                        connect_clicked(sender, key) => move |_| {
+                            send!(sender, ParsMsg::CountAt(key.downgrade()));
+                        }
+                    },
+                    append: remove_button = &gtk::Button {
+                        set_label: "Remove",
+                        connect_clicked(sender, key) => move |_| {
+                            send!(sender, ParsMsg::RemoveAt(key.downgrade()));
+                        }
+                    },
+                    append: ins_above_button = &gtk::Button {
+                        set_label: "Add above",
+                        connect_clicked(sender, key) => move |_| {
+                            send!(sender, ParsMsg::InsertBefore(key.downgrade()));
+                        }
+                    },
+                    append: ins_below_button = &gtk::Button {
+                        set_label: "Add below",
+                        connect_clicked(key) => move |_| {
+                            send!(sender, ParsMsg::InsertAfter(key.downgrade()));
+                        }
+                    },
+                },
+                append: rad_params_box = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_spacing: 10,
+                    set_homogeneous: true,
+                    append: lwa_entry = &gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 10,
+                        set_homogeneous: true,
+                        // Could justify the text, but not gonna do this in a stage this early
+                        append: &gtk::Label::new(Some("LWA")),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                    },
+                    append: lrtz_entry = &gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 10,
+                        set_homogeneous: true,
+                        append: &gtk::Label::new(Some("Lrtz")),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                    },
+                    append: amount_entry = &gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 10,
+                        set_homogeneous: true,
+                        append: &gtk::Label::new(Some("Amount")),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                    },
+                    append: dh1_entry = &gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 10,
+                        set_homogeneous: true,
+                        append: &gtk::Label::new(Some("dh1")),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                    },
+                },
+                append: nucs_box = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    set_spacing: 10,
+                    append: nuc_box = &gtk::Box {
+                        set_orientation: gtk::Orientation::Horizontal,
+                        set_spacing: 10,
+                        append: eqs_entry = &gtk::Box {
+                            set_orientation: gtk::Orientation::Horizontal,
+                            set_spacing: 10,
+                            append: &gtk::Label::new(Some("Eqs")),
+                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        },
+                        append: spin_entry = &gtk::Box {
+                            set_orientation: gtk::Orientation::Horizontal,
+                            set_spacing: 10,
+                            // Could justify the text, but not gonna do this in a stage this early
+                            append: &gtk::Label::new(Some("Spin")),
+                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        },
+                        append: hpf_entry = &gtk::Box {
+                            set_orientation: gtk::Orientation::Horizontal,
+                            set_spacing: 10,
+                            append: &gtk::Label::new(Some("Hpf")),
+                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        },
+                    }
                 }
             },
-            append: remove_button = &gtk::Button {
-                set_label: "Remove",
-                connect_clicked(sender, key) => move |_| {
-                    send!(sender, ParsMsg::RemoveAt(key.downgrade()));
-                }
-            },
-            append: ins_above_button = &gtk::Button {
-                set_label: "Add above",
-                connect_clicked(sender, key) => move |_| {
-                    send!(sender, ParsMsg::InsertBefore(key.downgrade()));
-                }
-            },
-            append: ins_below_button = &gtk::Button {
-                set_label: "Add below",
-                connect_clicked(key) => move |_| {
-                    send!(sender, ParsMsg::InsertAfter(key.downgrade()));
-                }
-            }
+            append: &gtk::Separator::new(gtk::Orientation::Horizontal),
         }
     }
 
@@ -172,10 +288,10 @@ impl Widgets<ParamsModel, AppModel> for ParamsWidgets {
         let add = gtk::Button::with_label("Add");
         let remove = gtk::Button::with_label("Remove");
 
-        main_box.append(&add);
-        main_box.append(&remove);
         main_box.append(&gen_box);
 
+        main_box.append(&add);
+        main_box.append(&remove);
         // main.set_child(Some(&main_box));
 
         let cloned_sender = sender.clone();

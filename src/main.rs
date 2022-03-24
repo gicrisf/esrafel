@@ -33,6 +33,7 @@ mod esr_io;
 mod sim;
 mod params;
 
+use sim::Radical;
 use drawers::{Line, Color};
 use params::ParamsModel;
 
@@ -200,7 +201,7 @@ impl OpenButtonParent for AppModel {
 #[derive(Default)]
 struct AppModel {
     empirical: Option<Vec<f64>>,
-    rads: Vec<sim::Radical>,
+    rads: Vec<Radical>,
     points: f64,
     sweep: f64,
     sigma: f64,
@@ -324,27 +325,50 @@ impl Widgets<AppModel, ()> for AppWidgets {
                     add_titled(Some("Params"), "Parameters") = &gtk::Box {
                         set_orientation: Orientation::Vertical,
                         set_hexpand: false,
-                        append = &gtk::Label {
-                            set_label: "This is the parameters page",
+                        set_spacing: 15,
+                        append = general_pars_box = &gtk::Box {
+                            set_orientation: Orientation::Horizontal,
+                            set_hexpand: true,
+                            set_spacing: 15,
+                            set_halign: gtk::Align::Fill,
+                            append = &gtk::Label {
+                                set_label: "General parameters: ",
+                            },
+                            append: sweep_entry = &gtk::Box {
+                                set_orientation: gtk::Orientation::Horizontal,
+                                set_spacing: 10,
+                                set_homogeneous: true,
+                                // Could justify the text, but not gonna do this in a stage this early
+                                append: &gtk::Label::new(Some("Sweep")),
+                                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                            },
+                            append: points_entry = &gtk::Box {
+                                set_orientation: gtk::Orientation::Horizontal,
+                                set_spacing: 10,
+                                set_homogeneous: true,
+                                // Could justify the text, but not gonna do this in a stage this early
+                                append: &gtk::Label::new(Some("Points")),
+                                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                            },
+                            append = &gtk::Button {
+                                set_label: "Decrease",
+                                connect_clicked(sender) => move |_| {
+                                    // send!(sender, AppMsg::Decrement)
+                                }
+                            },
+                        },  // ./ general pars box
+                        append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
+                            set_margin_bottom: 5,
                         },
-                        append = &adw::Bin {
+                        append = &gtk::ScrolledWindow {
+                            set_hscrollbar_policy: gtk::PolicyType::Never,
+                            set_min_content_height: 360,
+                            set_vexpand: true,
                             set_child: Some(components.params.root_widget()),
-                        },
-                        append = &gtk::Button {
-                            set_label: "Increase",
-                            connect_clicked(sender) => move |_| {
-                                // send!(sender, AppMsg::Increment)
-                            }
-                        },
-                        append = &gtk::Button {
-                            set_label: "Decrease",
-                            connect_clicked(sender) => move |_| {
-                                // send!(sender, AppMsg::Decrement)
-                            }
                         },
                     } -> params_page: ViewStackPage {
                         set_icon_name: Some("document-print-symbolic"),
-                        // set_badge_number: watch!(model.counter as u32),
+                        set_badge_number: watch!(model.rads.len() as u32),
                     },
                     add_titled(Some("Plot"), "Plot") = &gtk::Box {
                         set_orientation: Orientation::Vertical,
@@ -414,7 +438,7 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
-        rads: vec![sim::Radical::var_probe()],
+        rads: vec![Radical::var_probe()],
         points: 1024.0,
         sweep: 100.0,
         sigma: 1E+20,
