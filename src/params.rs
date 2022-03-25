@@ -2,7 +2,6 @@
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, OrientableExt},
-    Orientation,
     };
 
 use relm4::{
@@ -44,6 +43,17 @@ impl RadPar {
             dh1_var: 0.0,
         }
     }
+
+    fn default_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            0.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            10.0,  // step_increment
+            100.0,  // page_increment
+            1000.0  // page_size
+        )
+    }  // adjustment
 }
 
 #[derive(Debug)]
@@ -56,12 +66,12 @@ pub enum ParMsg {
     InsertAfter(WeakDynamicIndex),
     SetLwaVal(WeakDynamicIndex, f64),
     SetLwaVar(WeakDynamicIndex, f64),
-    // SetLrtzVal(WeakDynamicIndex, f64),
-    // SetLrtzVar(WeakDynamicIndex, f64),
-    // SetAmountVal(WeakDynamicIndex, f64),
-    // SetAmountVar(WeakDynamicIndex, f64),
-    // SetDh1Val(WeakDynamicIndex, f64),
-    // SetDh1Var(WeakDynamicIndex, f64),
+    SetLrtzVal(WeakDynamicIndex, f64),
+    SetLrtzVar(WeakDynamicIndex, f64),
+    SetAmountVal(WeakDynamicIndex, f64),
+    SetAmountVar(WeakDynamicIndex, f64),
+    SetDh1Val(WeakDynamicIndex, f64),
+    SetDh1Var(WeakDynamicIndex, f64),
 }
 
 pub struct ParamsModel {
@@ -131,6 +141,12 @@ impl ComponentUpdate<AppModel> for ParamsModel {
             ParMsg::SetLwaVar(weak_index, val) => {
                 println!("New Lwa Var for Radical {:?}: {}", weak_index.upgrade(), val);
             }
+            ParMsg::SetLrtzVal(weak_index, val) => {}
+            ParMsg::SetLrtzVar(weak_index, val) => {}
+            ParMsg::SetAmountVal(weak_index, val) => {}
+            ParMsg::SetAmountVar(weak_index, val) => {}
+            ParMsg::SetDh1Val(weak_index, val) => {}
+            ParMsg::SetDh1Var(weak_index, val) => {}
         }
         self.received_messages += 1;
     }
@@ -197,57 +213,74 @@ impl FactoryPrototype for RadPar {
                         prepend: &gtk::Label::new(Some("LWA")),
 
                         append: lwa_entry_val = &gtk::SpinButton {
-                            set_adjustment: &gtk::Adjustment::new(
-                                0.0,  // value
-                                0.0,  // lower
-                                100000000.0,  // upper
-                                10.0,  // step_increment
-                                100.0,  // page_increment
-                                1000.0  // page_size
-                            ),
+                            set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, ParMsg::SetLwaVal(key.downgrade(), val.value()));
                             }
                         },
 
                         append: lwa_entry_var = &gtk::SpinButton {
-                            set_adjustment: &gtk::Adjustment::new(
-                                0.0,  // value
-                                0.0,  // lower
-                                100000000.0,  // upper
-                                10.0,  // step_increment
-                                100.0,  // page_increment
-                                1000.0  // page_size
-                            ),
+                            set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, ParMsg::SetLwaVar(key.downgrade(), val.value()));
                             }
                         },
-
                     },
+                    // LRTZ Box
                     append: lrtz_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 10,
                         set_homogeneous: true,
-                        append: &gtk::Label::new(Some("Lrtz")),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        prepend: &gtk::Label::new(Some("Lrtz")),
+                        append: lrtz_entry_val = &gtk::SpinButton {
+                            set_adjustment: &RadPar::default_adjustment(),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetLrtzVal(key.downgrade(), val.value()));
+                            }
+                        },
+                        append: lrtz_entry_var = &gtk::SpinButton {
+                            set_adjustment: &RadPar::default_adjustment(),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetLrtzVar(key.downgrade(), val.value()));
+                            }
+                        },
                     },
+                    // Amount Box
                     append: amount_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 10,
                         set_homogeneous: true,
-                        append: &gtk::Label::new(Some("Amount")),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        prepend: &gtk::Label::new(Some("Amount")),
+                        append: amount_entry_val = &gtk::SpinButton {
+                            set_adjustment: &RadPar::default_adjustment(),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetAmountVal(key.downgrade(), val.value()));
+                            }
+                        },
+                        append: amount_entry_var = &gtk::SpinButton {
+                            set_adjustment: &RadPar::default_adjustment(),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetAmountVar(key.downgrade(), val.value()));
+                            }
+                        },
                     },
                     append: dh1_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 10,
                         set_homogeneous: true,
-                        append: &gtk::Label::new(Some("dh1")),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        prepend: &gtk::Label::new(Some("dh1")),
+                        append: dh1_entry_val = &gtk::SpinButton {
+                            set_adjustment: &RadPar::default_adjustment(),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetDh1Val(key.downgrade(), val.value()));
+                            }
+                        },
+                        append: dh1_entry_var = &gtk::SpinButton {
+                            set_adjustment: &RadPar::default_adjustment(),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetDh1Var(key.downgrade(), val.value()));
+                            }
+                        },
                     },
                 },
                 append: nucs_box = &gtk::Box {
