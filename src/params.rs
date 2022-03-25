@@ -14,7 +14,7 @@ use relm4::{
 use crate::{AppModel, AppMsg};
 // use crate::sim::Radical;
 
-struct Counter {
+struct Par {
     value: u8,
     lwa_val: f64,
     lwa_var: f64,
@@ -31,22 +31,30 @@ struct Counter {
 }
 
 #[derive(Debug)]
-pub enum ParsMsg {
+pub enum ParMsg {
     AddFirst,
     RemoveLast,
     CountAt(WeakDynamicIndex),
     RemoveAt(WeakDynamicIndex),
     InsertBefore(WeakDynamicIndex),
     InsertAfter(WeakDynamicIndex),
+    SetLwaVal(WeakDynamicIndex, f64),
+    SetLwaVar(WeakDynamicIndex, f64),
+    // SetLrtzVal(WeakDynamicIndex, f64),
+    // SetLrtzVar(WeakDynamicIndex, f64),
+    // SetAmountVal(WeakDynamicIndex, f64),
+    // SetAmountVar(WeakDynamicIndex, f64),
+    // SetDh1Val(WeakDynamicIndex, f64),
+    // SetDh1Var(WeakDynamicIndex, f64),
 }
 
 pub struct ParamsModel {
-    counters: FactoryVecDeque<Counter>,
+    pars: FactoryVecDeque<Par>,
     received_messages: u8,
 }
 
 impl Model for ParamsModel {
-    type Msg = ParsMsg;
+    type Msg = ParMsg;
     type Widgets = ParamsWidgets;
     type Components = ();
 }
@@ -54,21 +62,21 @@ impl Model for ParamsModel {
 impl ComponentUpdate<AppModel> for ParamsModel {
     fn init_model(_parent_model: &AppModel) -> Self {
         ParamsModel {
-            counters: FactoryVecDeque::new(),
+            pars: FactoryVecDeque::new(),
             received_messages: 0,
         }
     }
 
     fn update(
         &mut self,
-        msg: ParsMsg,
+        msg: ParMsg,
         _components: &(),
-        _sender: Sender<ParsMsg>,
+        _sender: Sender<ParMsg>,
         _parent_sender: Sender<AppMsg>,
     ) {
         match msg {
-            ParsMsg::AddFirst => {
-                self.counters.push_front(Counter {
+            ParMsg::AddFirst => {
+                self.pars.push_front(Par {
                     value: self.received_messages,
                     lwa_val: 0.0,
                     lwa_var: 0.0,
@@ -80,26 +88,26 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                     dh1_var: 0.0,
                 });
             }
-            ParsMsg::RemoveLast => {
-                self.counters.pop_back();
+            ParMsg::RemoveLast => {
+                self.pars.pop_back();
             }
-            ParsMsg::CountAt(weak_index) => {
+            ParMsg::CountAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
-                    if let Some(counter) = self.counters.get_mut(index.current_index()) {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.value = counter.value.wrapping_sub(1);
                     }
                 }
             }
-            ParsMsg::RemoveAt(weak_index) => {
+            ParMsg::RemoveAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
-                    self.counters.remove(index.current_index());
+                    self.pars.remove(index.current_index());
                 }
             }
-            ParsMsg::InsertBefore(weak_index) => {
+            ParMsg::InsertBefore(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
-                    self.counters.insert(
+                    self.pars.insert(
                         index.current_index(),
-                        Counter {
+                        Par {
                             value: self.received_messages,
                             lwa_val: 0.0,
                             lwa_var: 0.0,
@@ -113,11 +121,11 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                     );
                 }
             }
-            ParsMsg::InsertAfter(weak_index) => {
+            ParMsg::InsertAfter(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
-                    self.counters.insert(
+                    self.pars.insert(
                         index.current_index() + 1,
-                        Counter {
+                        Par {
                             value: self.received_messages,
                             lwa_val: 0.0,
                             lwa_var: 0.0,
@@ -130,6 +138,12 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                         },
                     );
                 }
+            }
+            ParMsg::SetLwaVal(weak_index, val) => {
+                println!("New Lwa Val for Radical {:?}: {}", weak_index.upgrade(), val);
+            }
+            ParMsg::SetLwaVar(weak_index, val) => {
+                println!("New Lwa Var for Radical {:?}: {}", weak_index.upgrade(), val);
             }
         }
         self.received_messages += 1;
@@ -137,11 +151,11 @@ impl ComponentUpdate<AppModel> for ParamsModel {
 }  // Component Update
 
 #[relm4::factory_prototype]
-impl FactoryPrototype for Counter {
+impl FactoryPrototype for Par {
     type Factory = FactoryVecDeque<Self>;
     type Widgets = FactoryWidgets;
     type View = gtk::Box;
-    type Msg = ParsMsg;
+    type Msg = ParMsg;
 
     view! {
         gtk::Box {
@@ -161,25 +175,25 @@ impl FactoryPrototype for Counter {
                     append: counter_button = &gtk::Button {
                         set_label: watch!(&self.value.to_string()),
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParsMsg::CountAt(key.downgrade()));
+                            send!(sender, ParMsg::CountAt(key.downgrade()));
                         }
                     },
                     append: remove_button = &gtk::Button {
                         set_label: "Remove",
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParsMsg::RemoveAt(key.downgrade()));
+                            send!(sender, ParMsg::RemoveAt(key.downgrade()));
                         }
                     },
                     append: ins_above_button = &gtk::Button {
                         set_label: "Add above",
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParsMsg::InsertBefore(key.downgrade()));
+                            send!(sender, ParMsg::InsertBefore(key.downgrade()));
                         }
                     },
                     append: ins_below_button = &gtk::Button {
                         set_label: "Add below",
-                        connect_clicked(key) => move |_| {
-                            send!(sender, ParsMsg::InsertAfter(key.downgrade()));
+                        connect_clicked(sender, key) => move |_| {
+                            send!(sender, ParMsg::InsertAfter(key.downgrade()));
                         }
                     },
                 },
@@ -187,14 +201,43 @@ impl FactoryPrototype for Counter {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 10,
                     set_homogeneous: true,
-                    append: lwa_entry = &gtk::Box {
+
+                    // LWA Box
+                    append: lwa_entry_old = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 10,
                         set_homogeneous: true,
-                        // Could justify the text, but not gonna do this in a stage this early
-                        append: &gtk::Label::new(Some("LWA")),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                        append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+
+                        prepend: &gtk::Label::new(Some("LWA")),
+
+                        append: lwa_entry_val = &gtk::SpinButton {
+                            set_adjustment: &gtk::Adjustment::new(
+                                0.0,  // value
+                                0.0,  // lower
+                                100000000.0,  // upper
+                                10.0,  // step_increment
+                                100.0,  // page_increment
+                                1000.0  // page_size
+                            ),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetLwaVal(key.downgrade(), val.value()));
+                            }
+                        },
+
+                        append: lwa_entry_var = &gtk::SpinButton {
+                            set_adjustment: &gtk::Adjustment::new(
+                                0.0,  // value
+                                0.0,  // lower
+                                100000000.0,  // upper
+                                10.0,  // step_increment
+                                100.0,  // page_increment
+                                1000.0  // page_size
+                            ),
+                            connect_value_changed(sender, key) => move |val| {
+                                send!(sender, ParMsg::SetLwaVar(key.downgrade(), val.value()));
+                            }
+                        },
+
                     },
                     append: lrtz_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
@@ -266,7 +309,7 @@ pub struct ParamsWidgets {
 impl Widgets<ParamsModel, AppModel> for ParamsWidgets {
     type Root = gtk::Box;
 
-    fn init_view(_model: &ParamsModel, _components: &(), sender: Sender<ParsMsg>) -> Self {
+    fn init_view(_model: &ParamsModel, _components: &(), sender: Sender<ParMsg>) -> Self {
         let main_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .margin_end(5)
@@ -296,18 +339,18 @@ impl Widgets<ParamsModel, AppModel> for ParamsWidgets {
 
         let cloned_sender = sender.clone();
         add.connect_clicked(move |_| {
-            cloned_sender.send(ParsMsg::AddFirst).unwrap();
+            cloned_sender.send(ParMsg::AddFirst).unwrap();
         });
 
         remove.connect_clicked(move |_| {
-            sender.send(ParsMsg::RemoveLast).unwrap();
+            sender.send(ParMsg::RemoveLast).unwrap();
         });
 
         ParamsWidgets { main_box, gen_box }
     }
 
-    fn view(&mut self, model: &ParamsModel, sender: Sender<ParsMsg>) {
-        model.counters.generate(&self.gen_box, sender);
+    fn view(&mut self, model: &ParamsModel, sender: Sender<ParMsg>) {
+        model.pars.generate(&self.gen_box, sender);
     }
 
     fn root_widget(&self) -> gtk::Box {

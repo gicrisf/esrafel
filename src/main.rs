@@ -380,12 +380,6 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                     }
                                 },
                             },
-                            append = &gtk::Button {
-                                set_label: "Decrease",
-                                connect_clicked(sender) => move |_| {
-                                    // send!(sender, AppMsg::Decrement)
-                                }
-                            },
                         },  // ./ general pars box
                         append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
                             set_margin_bottom: 5,
