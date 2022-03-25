@@ -14,7 +14,7 @@ use relm4::{
 use crate::{AppModel, AppMsg};
 // use crate::sim::Radical;
 
-struct Par {
+struct RadPar {
     value: u8,
     lwa_val: f64,
     lwa_var: f64,
@@ -28,6 +28,22 @@ struct Par {
     amount_var: f64,
     dh1_val: f64,
     dh1_var: f64,
+}
+
+impl RadPar {
+    fn new(v: u8) -> Self {
+        RadPar {
+            value: v,
+            lwa_val: 0.0,
+            lwa_var: 0.0,
+            lrtz_val: 50.0,
+            lrtz_var: 0.0,
+            amount_val: 100.0,
+            amount_var: 0.0,
+            dh1_val: 0.0,
+            dh1_var: 0.0,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -49,7 +65,7 @@ pub enum ParMsg {
 }
 
 pub struct ParamsModel {
-    pars: FactoryVecDeque<Par>,
+    pars: FactoryVecDeque<RadPar>,
     received_messages: u8,
 }
 
@@ -76,17 +92,7 @@ impl ComponentUpdate<AppModel> for ParamsModel {
     ) {
         match msg {
             ParMsg::AddFirst => {
-                self.pars.push_front(Par {
-                    value: self.received_messages,
-                    lwa_val: 0.0,
-                    lwa_var: 0.0,
-                    lrtz_val: 50.0,
-                    lrtz_var: 0.0,
-                    amount_val: 100.0,
-                    amount_var: 0.0,
-                    dh1_val: 0.0,
-                    dh1_var: 0.0,
-                });
+                self.pars.push_front(RadPar::new(self.received_messages));
             }
             ParMsg::RemoveLast => {
                 self.pars.pop_back();
@@ -107,17 +113,7 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.insert(
                         index.current_index(),
-                        Par {
-                            value: self.received_messages,
-                            lwa_val: 0.0,
-                            lwa_var: 0.0,
-                            lrtz_val: 50.0,
-                            lrtz_var: 0.0,
-                            amount_val: 100.0,
-                            amount_var: 0.0,
-                            dh1_val: 0.0,
-                            dh1_var: 0.0,
-                        },
+                        RadPar::new(self.received_messages),
                     );
                 }
             }
@@ -125,17 +121,7 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.insert(
                         index.current_index() + 1,
-                        Par {
-                            value: self.received_messages,
-                            lwa_val: 0.0,
-                            lwa_var: 0.0,
-                            lrtz_val: 50.0,
-                            lrtz_var: 0.0,
-                            amount_val: 100.0,
-                            amount_var: 0.0,
-                            dh1_val: 0.0,
-                            dh1_var: 0.0,
-                        },
+                        RadPar::new(self.received_messages),
                     );
                 }
             }
@@ -151,7 +137,7 @@ impl ComponentUpdate<AppModel> for ParamsModel {
 }  // Component Update
 
 #[relm4::factory_prototype]
-impl FactoryPrototype for Par {
+impl FactoryPrototype for RadPar {
     type Factory = FactoryVecDeque<Self>;
     type Widgets = FactoryWidgets;
     type View = gtk::Box;
