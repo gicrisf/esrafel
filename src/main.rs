@@ -67,9 +67,12 @@ impl ComponentUpdate<AppModel> for ChartModel {
         ChartModel {
             width: 1000.0,
             height: 600.0,
-            background_color: Color::rgb(250.0, 224.0, 55.0),
-            theoretical_color: Color::rgb(149.0, 25.0, 12.0),
-            empirical_color: Color::rgb(0.3, 0.3, 0.3),
+            background_color: Color::rgb(24.0, 24.0, 22.0),
+            // background_color: Color::rgb(250.0, 224.0, 55.0),
+            // theoretical_color: Color::rgb(149.0, 25.0, 12.0),
+            theoretical_color: Color::rgb(230.0, 111.0, 67.0),
+            //empirical_color: Color::rgb(0.3, 0.3, 0.3),
+            empirical_color: Color::rgb(254.0, 242.0, 235.0),
             theoretical_line: None,
             empirical_line: None,
         }
