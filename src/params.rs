@@ -13,12 +13,11 @@ use relm4::{
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Param};
 
-// NucPar Factory
+// NucPar Component
 
 enum NucParMsg {
     Add,
     Remove,
-    Clicked(usize),
 }
 
 struct NucPar {
@@ -26,6 +25,39 @@ struct NucPar {
     spin: f64,
     hpf: f64,
 }
+
+struct NucParModel {
+    nucs: FactoryVec<NucPar>,
+    created_nucs: u8,
+}
+
+impl Model for NucParModel {
+    type Msg = NucParMsg;
+    type Widgets = NucParWidgets;
+    type Components = ();
+}
+
+impl ComponentUpdate<RadParModel> for NucParModel {
+    fn init_model(_parent_model: &RadParModel) -> Self {
+        NucParModel {
+            nucs: FactoryVec::new(),
+            created_nucs: 0,
+        }  // NucParModel
+    }  // init_model
+
+    fn update(
+        &mut self,
+        msg: NucParMsg,
+        _components: &(),
+        sender: Sender<NucParMsg>,
+        parent_sender: Sender<ParMsg>
+    ) {
+        match msg {
+            Add => {}
+            Remove => {}
+        }
+    }  // update
+}  // impl for NucParModel
 
 #[derive(Debug)]
 struct NucFactoryWidgets {
@@ -56,6 +88,45 @@ impl FactoryPrototype for NucPar {
 
     fn root_widget(widgets: &NucFactoryWidgets) -> &gtk::Box {
         &widgets.nuc_box
+    }
+}
+
+pub struct NucParWidgets {
+    main_box: gtk::Box,
+    gen_box: gtk::Box,
+}
+
+impl Widgets<NucParModel, AppModel> for NucParWidgets {
+    type Root = gtk::Box;
+
+    fn init_view(_model: &NucParModel, _components: &(), sender: Sender<NucParMsg>) -> Self {
+        let main_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .margin_end(5)
+            .margin_top(5)
+            .margin_start(5)
+            .margin_bottom(5)
+            .spacing(5)
+            .build();
+
+        let gen_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Vertical)
+            .margin_end(5)
+            .margin_top(5)
+            .margin_start(5)
+            .margin_bottom(5)
+            .spacing(5)
+            .build();
+
+        NucParWidgets { main_box, gen_box }
+    }
+
+    fn view(&mut self, model: &NucParModel, sender: Sender<NucParMsg>) {
+        model.nucs.generate(&self.gen_box, sender);
+    }
+
+    fn root_widget(&self) -> gtk::Box {
+        self.main_box.clone()
     }
 }
 
