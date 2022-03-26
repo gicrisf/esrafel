@@ -217,6 +217,7 @@ enum AppMsg {
     IterMontecarlo,
     ToggleMontecarlo(bool),
     Open(PathBuf),
+    UpdateRads(Vec<Radical>),
     SetSweep(f64),
     SetPoints(usize),  // then, temporarily convert to f64
 }
@@ -237,6 +238,9 @@ impl Model for AppModel {
 impl AppUpdate for AppModel {
     fn update(&mut self, msg: AppMsg, components: &AppComponents, _sender: Sender<AppMsg>) -> bool {
         match msg {
+            AppMsg::UpdateRads(new_rads) => {
+                self.rads = new_rads;
+            }
             AppMsg::IterMontecarlo => {
                 // This is a fast and working solution, but a persistent iteration is not an elegant move
                 // Must search for another tracking method, but it's not a priority rn
@@ -271,7 +275,10 @@ impl AppUpdate for AppModel {
                             f.read_to_string(&mut data).expect("Unable to read string");
                             self.empirical = Some(esr_io::get_from_ascii(&data));
                         } // txt case
-
+                        // TODO show those messages with a toast
+                        "esr" => {
+                            println!("Legacy format not supported yet!");
+                        }
                         "json" => {
                             println!("JSON not supported yet!");
                         }  // json case

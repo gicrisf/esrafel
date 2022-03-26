@@ -11,7 +11,7 @@ use relm4::{
 };
 
 use crate::{AppModel, AppMsg};
-// use crate::sim::Radical;
+use crate::sim::{Radical, Param};
 
 struct RadPar {
     value: u8,
@@ -54,12 +54,24 @@ impl RadPar {
             1000.0  // page_size
         )
     }  // adjustment
+
+    fn to_rad(&self) -> Radical {
+        Radical {
+            lwa: Param::set(self.lwa_val, self.lwa_var),
+            lrtz: Param::set(self.lrtz_val, self.lrtz_var),
+            amount: Param::set(self.amount_val, self.amount_var),
+            dh1: Param::set(self.dh1_val, self.dh1_var),
+            // TODO nucs setter
+            nucs: Vec::new(),
+        }
+    }
 }
 
 #[derive(Debug)]
 pub enum ParMsg {
     AddFirst,
     RemoveLast,
+    Update,
     CountAt(WeakDynamicIndex),
     RemoveAt(WeakDynamicIndex),
     InsertBefore(WeakDynamicIndex),
@@ -98,7 +110,7 @@ impl ComponentUpdate<AppModel> for ParamsModel {
         msg: ParMsg,
         _components: &(),
         _sender: Sender<ParMsg>,
-        _parent_sender: Sender<AppMsg>,
+        parent_sender: Sender<AppMsg>,
     ) {
         match msg {
             ParMsg::AddFirst => {
@@ -106,6 +118,16 @@ impl ComponentUpdate<AppModel> for ParamsModel {
             }
             ParMsg::RemoveLast => {
                 self.pars.pop_back();
+            }
+            ParMsg::Update => {
+                // UpdateMain
+                println!("Update Pars in main model");
+                let mut new_rads: Vec<Radical> = Vec::new();
+                for rad_par in self.pars.iter() {
+                    new_rads.push(rad_par.to_rad());
+                }
+
+                send!(parent_sender, AppMsg::UpdateRads(new_rads));
             }
             ParMsg::CountAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
@@ -136,17 +158,61 @@ impl ComponentUpdate<AppModel> for ParamsModel {
                 }
             }
             ParMsg::SetLwaVal(weak_index, val) => {
-                println!("New Lwa Val for Radical {:?}: {}", weak_index.upgrade(), val);
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.lwa_val = val;
+                    }
+                }
             }
             ParMsg::SetLwaVar(weak_index, val) => {
-                println!("New Lwa Var for Radical {:?}: {}", weak_index.upgrade(), val);
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.lwa_var = val;
+                    }
+                }
             }
-            ParMsg::SetLrtzVal(weak_index, val) => {}
-            ParMsg::SetLrtzVar(weak_index, val) => {}
-            ParMsg::SetAmountVal(weak_index, val) => {}
-            ParMsg::SetAmountVar(weak_index, val) => {}
-            ParMsg::SetDh1Val(weak_index, val) => {}
-            ParMsg::SetDh1Var(weak_index, val) => {}
+            ParMsg::SetLrtzVal(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.lrtz_val = val;
+                    }
+                }
+            }
+            ParMsg::SetLrtzVar(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.lrtz_var = val;
+                    }
+                }
+            }
+            ParMsg::SetAmountVal(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.amount_val = val;
+                    }
+                }
+            }
+            ParMsg::SetAmountVar(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.amount_var = val;
+                    }
+                }
+            }
+            ParMsg::SetDh1Val(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.dh1_val = val;
+                    }
+                }
+            }
+            ParMsg::SetDh1Var(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        counter.dh1_var = val;
+                    }
+                }
+            }
         }
         self.received_messages += 1;
     }
@@ -209,16 +275,13 @@ impl FactoryPrototype for RadPar {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 10,
                         set_homogeneous: true,
-
                         prepend: &gtk::Label::new(Some("LWA")),
-
                         append: lwa_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, ParMsg::SetLwaVal(key.downgrade(), val.value()));
                             }
                         },
-
                         append: lwa_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
@@ -349,20 +412,29 @@ impl Widgets<ParamsModel, AppModel> for ParamsWidgets {
 
         let add = gtk::Button::with_label("Add");
         let remove = gtk::Button::with_label("Remove");
+        let update = gtk::Button::with_label("Update");
+        // TODO cancel function
+        // let cancel = gtk::Button::with_label("Cancel");
 
         main_box.append(&gen_box);
 
         main_box.append(&add);
         main_box.append(&remove);
-        // main.set_child(Some(&main_box));
+        main_box.append(&update);
 
-        let cloned_sender = sender.clone();
+        let sender_cloned_0 = sender.clone();
+        let sender_cloned_1 = sender.clone();
+
         add.connect_clicked(move |_| {
-            cloned_sender.send(ParMsg::AddFirst).unwrap();
+            sender_cloned_0.send(ParMsg::AddFirst).unwrap();
         });
 
         remove.connect_clicked(move |_| {
-            sender.send(ParMsg::RemoveLast).unwrap();
+            sender_cloned_1.send(ParMsg::RemoveLast).unwrap();
+        });
+
+        update.connect_clicked(move |_| {
+            sender.send(ParMsg::Update).unwrap();
         });
 
         ParamsWidgets { main_box, gen_box }

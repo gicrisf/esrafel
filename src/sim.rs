@@ -3,7 +3,7 @@ use rand::{thread_rng, Rng};
 // TODO use better var names
 // Temporarily maintaining legacy name to make easier comparison
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Param {
     pub val: f64,  // Value; starts with 0.0
     pub var: f64,  // Variation; starts with: 0.0
@@ -27,7 +27,7 @@ impl Param {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Nucleus {
     pub spin: Param,  // Nuclear spin;
     pub hpf: Param,  // Hyperfine constant;
@@ -44,7 +44,7 @@ impl Nucleus {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Radical {
     pub lwa: Param,  // Line width A
     // pub lwb: Param,
