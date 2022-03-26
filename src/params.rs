@@ -7,11 +7,59 @@ use gtk::{
 use relm4::{
     gtk, send,
     ComponentUpdate, Model, Sender, Widgets,
-    factory::{Factory, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
+    factory::{Factory, FactoryVec, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
 };
 
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Param};
+
+// NucPar Factory
+
+enum NucParMsg {
+    Add,
+    Remove,
+    Clicked(usize),
+}
+
+struct NucPar {
+    eqs: usize,
+    spin: f64,
+    hpf: f64,
+}
+
+#[derive(Debug)]
+struct NucFactoryWidgets {
+    nuc_box: gtk::Box,
+    nuc_lbl: gtk::Label,
+}
+
+impl FactoryPrototype for NucPar {
+    type Factory = FactoryVec<Self>;
+    type Widgets = NucFactoryWidgets;
+    type Root = gtk::Box;
+    type View = gtk::Box;
+    type Msg = NucParMsg;
+
+    fn init_view(&self, index: &usize, sender: Sender<NucParMsg>) -> NucFactoryWidgets {
+        let nuc_box = gtk::Box::new(gtk::Orientation::Vertical, 15);
+        let nuc_lbl = gtk::Label::new(Some("Nuc"));
+        nuc_box.append(&nuc_lbl);
+
+        NucFactoryWidgets { nuc_box, nuc_lbl }
+    }
+
+    fn position(&self, _index: &usize) {}
+
+    fn view(&self, _index: &usize, widgets: &NucFactoryWidgets) {
+        widgets.nuc_lbl.set_label(&self.spin.to_string());
+    }
+
+    fn root_widget(widgets: &NucFactoryWidgets) -> &gtk::Box {
+        &widgets.nuc_box
+    }
+}
+
+// RadPar Factory
 
 struct RadPar {
     value: u8,
@@ -27,6 +75,7 @@ struct RadPar {
     amount_var: f64,
     dh1_val: f64,
     dh1_var: f64,
+    nucs: FactoryVec<NucPar>,
 }
 
 impl RadPar {
@@ -41,6 +90,7 @@ impl RadPar {
             amount_var: 0.0,
             dh1_val: 0.0,
             dh1_var: 0.0,
+            nucs: FactoryVec::new(),
         }
     }
 
