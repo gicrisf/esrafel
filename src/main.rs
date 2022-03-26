@@ -68,10 +68,7 @@ impl ComponentUpdate<AppModel> for ChartModel {
             width: 1000.0,
             height: 600.0,
             background_color: Color::rgb(24.0, 24.0, 22.0),
-            // background_color: Color::rgb(250.0, 224.0, 55.0),
-            // theoretical_color: Color::rgb(149.0, 25.0, 12.0),
             theoretical_color: Color::rgb(230.0, 111.0, 67.0),
-            //empirical_color: Color::rgb(0.3, 0.3, 0.3),
             empirical_color: Color::rgb(254.0, 242.0, 235.0),
             theoretical_line: None,
             empirical_line: None,
@@ -163,8 +160,6 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
     }  // pre view
 }
 
-// Param Factory Model
-
 // -- Open Button
 
 struct OpenFileButtonConfig {}
@@ -173,12 +168,17 @@ impl OpenDialogConfig for OpenFileButtonConfig {
     type Model = AppModel;
 
     fn open_dialog_config(_model: &Self::Model) -> OpenDialogSettings {
+
+        let filter = gtk::FileFilter::new();
+        filter.add_pattern("*.txt");
+        filter.add_pattern("*.json");
+
         OpenDialogSettings {
             accept_label: "Open",
             cancel_label: "Cancel",
             create_folders: true,
             is_modal: true,
-            filters: Vec::new(),
+            filters: vec![filter],
         }
     }
 }
@@ -187,6 +187,7 @@ impl OpenButtonConfig for OpenFileButtonConfig {
     fn open_button_config(_model: &Self::Model) -> OpenButtonSettings {
         OpenButtonSettings {
             text: "Open file",
+            // TODO move to gresources
             recently_opened_files: Some(".recent_files"),
             max_recent_files: 10,
         }
@@ -248,10 +249,9 @@ impl AppUpdate for AppModel {
                     self.sigma = newsigma;
                     self.rads = newrads;
                     self.iters+=1;
+                    // TODO store sim::calcola just once
                     components.chart.send(ChartMsg::AddTheoretical(sim::calcola(&self.rads)))
                                     .expect("Failed sending new theoretical spectrum to the Chart");
-
-                    // println!("iters: {}", self.iters);
                 } // if empirical exists
                 } // if montecarlo toggled
             }
@@ -259,20 +259,33 @@ impl AppUpdate for AppModel {
                 self.montecarlo = v;
             }  // ./Montecarlo
             AppMsg::Open(path) => {
-                println!("* Open file at {:?} *", path);
                 let mut data = String::new();
-                let mut f = File::open(path).expect("Unable to open file");
-                f.read_to_string(&mut data).expect("Unable to read string");
 
-                // TODO manage errors in reading files!
-                // TODO choose right function basing on the extension
-                // match -> ascii -> json -> esr (etc.)
-                let new_empirical_vec = esr_io::get_from_ascii(&data);
+                if let Some(ext) = path.extension() {
+                    let ext_as_str =
+                        ext.to_str().expect("Cannot convert extension to string; non-unicode chars, maybe?");
+
+                    match ext_as_str {
+                        "txt" => {
+                            let mut f = File::open(path).expect("Unable to open txt file");
+                            f.read_to_string(&mut data).expect("Unable to read string");
+                            self.empirical = Some(esr_io::get_from_ascii(&data));
+                        } // txt case
+
+                        "json" => {
+                            println!("JSON not supported yet!");
+                        }  // json case
+                        _ => {
+                            println!("How did you even opened this extension?!");
+                        }
+                    }
+                }
 
                 // Store in both AppModel and ChartModel?
-                self.empirical = Some(new_empirical_vec.clone());
-                components.chart.send(ChartMsg::AddEmpirical(new_empirical_vec))
-                                .expect("Failed sending empirical spectrum to the Chart");
+                if let Some(emp) = &self.empirical {
+                    components.chart.send(ChartMsg::AddEmpirical(emp.to_vec()))
+                                    .expect("Failed sending empirical spectrum to the Chart");
+                }
             }
             AppMsg::SetSweep(value) => {
                 self.sweep = value;
