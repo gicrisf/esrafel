@@ -136,20 +136,20 @@ pub enum ParMsg {
     SetDh1Var(WeakDynamicIndex, f64),
 }
 
-pub struct ParamsModel {
+pub struct RadParModel {
     pars: FactoryVecDeque<RadPar>,
     received_messages: u8,
 }
 
-impl Model for ParamsModel {
+impl Model for RadParModel {
     type Msg = ParMsg;
-    type Widgets = ParamsWidgets;
+    type Widgets = RadParWidgets;
     type Components = ();
 }
 
-impl ComponentUpdate<AppModel> for ParamsModel {
+impl ComponentUpdate<AppModel> for RadParModel {
     fn init_model(_parent_model: &AppModel) -> Self {
-        ParamsModel {
+        RadParModel {
             pars: FactoryVecDeque::new(),
             received_messages: 0,
         }
@@ -433,15 +433,15 @@ impl FactoryPrototype for RadPar {
     fn position(&self, _index: &DynamicIndex) {}
 }
 
-pub struct ParamsWidgets {
+pub struct RadParWidgets {
     main_box: gtk::Box,
     gen_box: gtk::Box,
 }
 
-impl Widgets<ParamsModel, AppModel> for ParamsWidgets {
+impl Widgets<RadParModel, AppModel> for RadParWidgets {
     type Root = gtk::Box;
 
-    fn init_view(_model: &ParamsModel, _components: &(), sender: Sender<ParMsg>) -> Self {
+    fn init_view(_model: &RadParModel, _components: &(), sender: Sender<ParMsg>) -> Self {
         let main_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .margin_end(5)
@@ -487,10 +487,10 @@ impl Widgets<ParamsModel, AppModel> for ParamsWidgets {
             sender.send(ParMsg::Update).unwrap();
         });
 
-        ParamsWidgets { main_box, gen_box }
+        RadParWidgets { main_box, gen_box }
     }
 
-    fn view(&mut self, model: &ParamsModel, sender: Sender<ParMsg>) {
+    fn view(&mut self, model: &RadParModel, sender: Sender<ParMsg>) {
         model.pars.generate(&self.gen_box, sender);
     }
 

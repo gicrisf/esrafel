@@ -35,7 +35,7 @@ mod params;
 
 use sim::Radical;
 use drawers::{Line, Color};
-use params::ParamsModel;
+use params::RadParModel;
 
 // -- Chart model
 
@@ -225,7 +225,7 @@ enum AppMsg {
 #[derive(relm4::Components)]
 struct AppComponents {
     chart: RelmComponent<ChartModel, AppModel>,
-    params: RelmComponent<ParamsModel, AppModel>,
+    params: RelmComponent<RadParModel, AppModel>,
     open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
 }
 
