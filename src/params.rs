@@ -22,16 +22,35 @@ enum NucParMsg {
 }
 
 #[derive(Debug)]
-struct NucPar {
+struct NucParModel {
     eqs: usize,
-    spin: f64,
-    hpf: f64,
+    spin_val: f64,
+    spin_var: f64,
+    hpf_val: f64,
+    hpf_var: f64,
 }
 
-#[derive(Debug)]
-struct NucParModel {
-    nucs: Vec<NucPar>,
-    created_nucs: u8,
+impl NucParModel {
+    fn new() -> Self {
+        NucParModel {
+            eqs: 1,
+            spin_val: 0.0,
+            spin_var: 50.0,
+            hpf_val: 0.0,
+            hpf_var: 100.0,
+        }
+    }
+
+    fn default_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            0.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            10.0,  // step_increment
+            100.0,  // page_increment
+            1000.0  // page_size
+        )
+    }  // adjustment
 }
 
 impl MicroModel for NucParModel {
@@ -46,7 +65,8 @@ impl MicroModel for NucParModel {
         sender: Sender<NucParMsg>,
     ) {
         match msg {
-            Add => {}
+            Add => {
+            }
             Remove => {}
         }
     }  // update
@@ -60,7 +80,7 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
             set_orientation: gtk::Orientation::Horizontal,
             set_spacing: 5,
             append = &gtk::Label {
-                set_label: watch!(&model.created_nucs.to_string()),
+                set_label: watch!(&model.eqs.to_string()),
             },
             append = &gtk::Button {
                 set_label: "Add",
@@ -70,41 +90,15 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
                 set_label: "Del",
                 connect_clicked(sender) => move |_| send!(sender, NucParMsg::Remove),
             },
+            append: eqs_entry = &gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 10,
+                append: &gtk::Label::new(Some("Eqs")),
+                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+            }
         }
     }
 }  // impl for NucParWidgets
-
-#[derive(Debug)]
-struct NucFactoryWidgets {
-    nuc_box: gtk::Box,
-    nuc_lbl: gtk::Label,
-}
-
-impl FactoryPrototype for NucPar {
-    type Factory = FactoryVec<Self>;
-    type Widgets = NucFactoryWidgets;
-    type Root = gtk::Box;
-    type View = gtk::Box;
-    type Msg = NucParMsg;
-
-    fn init_view(&self, index: &usize, sender: Sender<NucParMsg>) -> NucFactoryWidgets {
-        let nuc_box = gtk::Box::new(gtk::Orientation::Vertical, 15);
-        let nuc_lbl = gtk::Label::new(Some("Nuc"));
-        nuc_box.append(&nuc_lbl);
-
-        NucFactoryWidgets { nuc_box, nuc_lbl }
-    }
-
-    fn position(&self, _index: &usize) {}
-
-    fn view(&self, _index: &usize, widgets: &NucFactoryWidgets) {
-        widgets.nuc_lbl.set_label(&self.spin.to_string());
-    }
-
-    fn root_widget(widgets: &NucFactoryWidgets) -> &gtk::Box {
-        &widgets.nuc_box
-    }
-}
 
 // RadPar Factory
 
@@ -165,7 +159,7 @@ impl RadPar {
 }
 
 #[derive(Debug)]
-pub enum ParMsg {
+pub enum RadParMsg {
     AddFirst,
     RemoveLast,
     Update,
@@ -181,6 +175,8 @@ pub enum ParMsg {
     SetAmountVar(WeakDynamicIndex, f64),
     SetDh1Val(WeakDynamicIndex, f64),
     SetDh1Var(WeakDynamicIndex, f64),
+    AddNuc(WeakDynamicIndex),
+    RemoveNuc(WeakDynamicIndex),
 }
 
 pub struct RadParModel {
@@ -194,7 +190,7 @@ pub struct RadParModel {
 // }
 
 impl Model for RadParModel {
-    type Msg = ParMsg;
+    type Msg = RadParMsg;
     type Widgets = RadParWidgets;
     type Components = ();
 }
@@ -209,19 +205,19 @@ impl ComponentUpdate<AppModel> for RadParModel {
 
     fn update(
         &mut self,
-        msg: ParMsg,
+        msg: RadParMsg,
         _components: &(),
-        _sender: Sender<ParMsg>,
+        _sender: Sender<RadParMsg>,
         parent_sender: Sender<AppMsg>,
     ) {
         match msg {
-            ParMsg::AddFirst => {
+            RadParMsg::AddFirst => {
                 self.pars.push_front(RadPar::new(self.received_messages));
             }
-            ParMsg::RemoveLast => {
+            RadParMsg::RemoveLast => {
                 self.pars.pop_back();
             }
-            ParMsg::Update => {
+            RadParMsg::Update => {
                 // UpdateMain
                 println!("Update Pars in main model");
                 let mut new_rads: Vec<Radical> = Vec::new();
@@ -231,19 +227,19 @@ impl ComponentUpdate<AppModel> for RadParModel {
 
                 send!(parent_sender, AppMsg::UpdateRads(new_rads));
             }
-            ParMsg::CountAt(weak_index) => {
+            RadParMsg::CountAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.value = counter.value.wrapping_sub(1);
                     }
                 }
             }
-            ParMsg::RemoveAt(weak_index) => {
+            RadParMsg::RemoveAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.remove(index.current_index());
                 }
             }
-            ParMsg::InsertBefore(weak_index) => {
+            RadParMsg::InsertBefore(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.insert(
                         index.current_index(),
@@ -251,7 +247,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     );
                 }
             }
-            ParMsg::InsertAfter(weak_index) => {
+            RadParMsg::InsertAfter(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.insert(
                         index.current_index() + 1,
@@ -259,59 +255,76 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     );
                 }
             }
-            ParMsg::SetLwaVal(weak_index, val) => {
+            RadParMsg::SetLwaVal(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.lwa_val = val;
                     }
                 }
             }
-            ParMsg::SetLwaVar(weak_index, val) => {
+            RadParMsg::SetLwaVar(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.lwa_var = val;
                     }
                 }
             }
-            ParMsg::SetLrtzVal(weak_index, val) => {
+            RadParMsg::SetLrtzVal(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.lrtz_val = val;
                     }
                 }
             }
-            ParMsg::SetLrtzVar(weak_index, val) => {
+            RadParMsg::SetLrtzVar(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.lrtz_var = val;
                     }
                 }
             }
-            ParMsg::SetAmountVal(weak_index, val) => {
+            RadParMsg::SetAmountVal(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.amount_val = val;
                     }
                 }
             }
-            ParMsg::SetAmountVar(weak_index, val) => {
+            RadParMsg::SetAmountVar(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.amount_var = val;
                     }
                 }
             }
-            ParMsg::SetDh1Val(weak_index, val) => {
+            RadParMsg::SetDh1Val(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.dh1_val = val;
                     }
                 }
             }
-            ParMsg::SetDh1Var(weak_index, val) => {
+            RadParMsg::SetDh1Var(weak_index, val) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.dh1_var = val;
+                    }
+                }
+            }
+            RadParMsg::AddNuc(weak_index) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        // counter.dh1_var = val;
+                        println!("Add Nuc to Radical with {} index", index.current_index());
+                        counter.nucs.push(MicroComponent::new(NucParModel::new(), ()))
+                    }
+                }
+            }
+            RadParMsg::RemoveNuc(weak_index) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        println!("Remove Nuc to Radical with {} index", index.current_index());
+                        counter.nucs.pop();
                     }
                 }
             }
@@ -325,7 +338,7 @@ impl FactoryPrototype for RadPar {
     type Factory = FactoryVecDeque<Self>;
     type Widgets = FactoryWidgets;
     type View = gtk::Box;
-    type Msg = ParMsg;
+    type Msg = RadParMsg;
 
     view! {
         gtk::Box {
@@ -345,25 +358,25 @@ impl FactoryPrototype for RadPar {
                     append: counter_button = &gtk::Button {
                         set_label: watch!(&self.value.to_string()),
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParMsg::CountAt(key.downgrade()));
+                            send!(sender, RadParMsg::CountAt(key.downgrade()));
                         }
                     },
                     append: remove_button = &gtk::Button {
                         set_label: "Remove",
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParMsg::RemoveAt(key.downgrade()));
+                            send!(sender, RadParMsg::RemoveAt(key.downgrade()));
                         }
                     },
                     append: ins_above_button = &gtk::Button {
                         set_label: "Add above",
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParMsg::InsertBefore(key.downgrade()));
+                            send!(sender, RadParMsg::InsertBefore(key.downgrade()));
                         }
                     },
                     append: ins_below_button = &gtk::Button {
                         set_label: "Add below",
                         connect_clicked(sender, key) => move |_| {
-                            send!(sender, ParMsg::InsertAfter(key.downgrade()));
+                            send!(sender, RadParMsg::InsertAfter(key.downgrade()));
                         }
                     },
                 },
@@ -381,13 +394,13 @@ impl FactoryPrototype for RadPar {
                         append: lwa_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetLwaVal(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetLwaVal(key.downgrade(), val.value()));
                             }
                         },
                         append: lwa_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetLwaVar(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetLwaVar(key.downgrade(), val.value()));
                             }
                         },
                     },
@@ -400,13 +413,13 @@ impl FactoryPrototype for RadPar {
                         append: lrtz_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetLrtzVal(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetLrtzVal(key.downgrade(), val.value()));
                             }
                         },
                         append: lrtz_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetLrtzVar(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetLrtzVar(key.downgrade(), val.value()));
                             }
                         },
                     },
@@ -419,13 +432,13 @@ impl FactoryPrototype for RadPar {
                         append: amount_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetAmountVal(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetAmountVal(key.downgrade(), val.value()));
                             }
                         },
                         append: amount_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetAmountVar(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetAmountVar(key.downgrade(), val.value()));
                             }
                         },
                     },
@@ -437,13 +450,13 @@ impl FactoryPrototype for RadPar {
                         append: dh1_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetDh1Val(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetDh1Val(key.downgrade(), val.value()));
                             }
                         },
                         append: dh1_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::default_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
-                                send!(sender, ParMsg::SetDh1Var(key.downgrade(), val.value()));
+                                send!(sender, RadParMsg::SetDh1Var(key.downgrade(), val.value()));
                             }
                         },
                     },
@@ -451,6 +464,17 @@ impl FactoryPrototype for RadPar {
                 append: nucs_box = &gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 10,
+                    append = append = &gtk::Button {
+                        set_label: "Add Nuc",
+                        connect_clicked(sender, key) => move |val| {
+                            send!(sender, RadParMsg::AddNuc(key.downgrade()));
+                        }
+                    },
+                    append = &gtk::Button::with_label("Remove Nuc") {
+                        connect_clicked(sender, key) => move |val| {
+                            send!(sender, RadParMsg::RemoveNuc(key.downgrade()));
+                        }
+                    },
                     append: nuc_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 10,
@@ -493,7 +517,7 @@ pub struct RadParWidgets {
 impl Widgets<RadParModel, AppModel> for RadParWidgets {
     type Root = gtk::Box;
 
-    fn init_view(_model: &RadParModel, _components: &(), sender: Sender<ParMsg>) -> Self {
+    fn init_view(_model: &RadParModel, _components: &(), sender: Sender<RadParMsg>) -> Self {
         let main_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
             .margin_end(5)
@@ -512,9 +536,9 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
             .spacing(5)
             .build();
 
-        let add = gtk::Button::with_label("Add");
-        let remove = gtk::Button::with_label("Remove");
-        let update = gtk::Button::with_label("Update");
+        let add = gtk::Button::with_label("Add Rad");
+        let remove = gtk::Button::with_label("Remove Rad");
+        let update = gtk::Button::with_label("Update Simulator");
         // TODO cancel function
         // let cancel = gtk::Button::with_label("Cancel");
 
@@ -528,21 +552,21 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
         let sender_cloned_1 = sender.clone();
 
         add.connect_clicked(move |_| {
-            sender_cloned_0.send(ParMsg::AddFirst).unwrap();
+            sender_cloned_0.send(RadParMsg::AddFirst).unwrap();
         });
 
         remove.connect_clicked(move |_| {
-            sender_cloned_1.send(ParMsg::RemoveLast).unwrap();
+            sender_cloned_1.send(RadParMsg::RemoveLast).unwrap();
         });
 
         update.connect_clicked(move |_| {
-            sender.send(ParMsg::Update).unwrap();
+            sender.send(RadParMsg::Update).unwrap();
         });
 
         RadParWidgets { main_box, gen_box }
     }
 
-    fn view(&mut self, model: &RadParModel, sender: Sender<ParMsg>) {
+    fn view(&mut self, model: &RadParModel, sender: Sender<RadParMsg>) {
         model.pars.generate(&self.gen_box, sender);
     }
 
