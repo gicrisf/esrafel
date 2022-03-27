@@ -6,58 +6,73 @@ use gtk::{
 
 use relm4::{
     gtk, send,
-    ComponentUpdate, Model, Sender, Widgets,
+    MicroComponent, MicroModel, MicroWidgets, ComponentUpdate, Model, Sender, Widgets,
     factory::{Factory, FactoryVec, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
 };
 
 use crate::{AppModel, AppMsg};
-use crate::sim::{Radical, Param};
+use crate::sim::{Radical, Nucleus, Param};
 
 // NucPar Component
 
+#[derive(Debug)]
 enum NucParMsg {
     Add,
     Remove,
 }
 
+#[derive(Debug)]
 struct NucPar {
     eqs: usize,
     spin: f64,
     hpf: f64,
 }
 
+#[derive(Debug)]
 struct NucParModel {
-    nucs: FactoryVec<NucPar>,
+    nucs: Vec<NucPar>,
     created_nucs: u8,
 }
 
-impl Model for NucParModel {
+impl MicroModel for NucParModel {
     type Msg = NucParMsg;
     type Widgets = NucParWidgets;
-    type Components = ();
-}
+    type Data = ();
 
-impl ComponentUpdate<RadParModel> for NucParModel {
-    fn init_model(_parent_model: &RadParModel) -> Self {
-        NucParModel {
-            nucs: FactoryVec::new(),
-            created_nucs: 0,
-        }  // NucParModel
-    }  // init_model
-
-    fn update(
+   fn update(
         &mut self,
         msg: NucParMsg,
-        _components: &(),
+        _data: &(),
         sender: Sender<NucParMsg>,
-        parent_sender: Sender<ParMsg>
     ) {
         match msg {
             Add => {}
             Remove => {}
         }
     }  // update
-}  // impl for NucParModel
+}
+
+#[relm4::micro_widget]
+#[derive(Debug)]
+impl MicroWidgets<NucParModel> for NucParWidgets {
+    view! {
+        gtk::Box {
+            set_orientation: gtk::Orientation::Horizontal,
+            set_spacing: 5,
+            append = &gtk::Label {
+                set_label: watch!(&model.created_nucs.to_string()),
+            },
+            append = &gtk::Button {
+                set_label: "Add",
+                connect_clicked(sender) => move |_| send!(sender, NucParMsg::Add),
+            },
+            append = &gtk::Button {
+                set_label: "Del",
+                connect_clicked(sender) => move |_| send!(sender, NucParMsg::Remove),
+            },
+        }
+    }
+}  // impl for NucParWidgets
 
 #[derive(Debug)]
 struct NucFactoryWidgets {
@@ -91,45 +106,6 @@ impl FactoryPrototype for NucPar {
     }
 }
 
-pub struct NucParWidgets {
-    main_box: gtk::Box,
-    gen_box: gtk::Box,
-}
-
-impl Widgets<NucParModel, AppModel> for NucParWidgets {
-    type Root = gtk::Box;
-
-    fn init_view(_model: &NucParModel, _components: &(), sender: Sender<NucParMsg>) -> Self {
-        let main_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .margin_end(5)
-            .margin_top(5)
-            .margin_start(5)
-            .margin_bottom(5)
-            .spacing(5)
-            .build();
-
-        let gen_box = gtk::Box::builder()
-            .orientation(gtk::Orientation::Vertical)
-            .margin_end(5)
-            .margin_top(5)
-            .margin_start(5)
-            .margin_bottom(5)
-            .spacing(5)
-            .build();
-
-        NucParWidgets { main_box, gen_box }
-    }
-
-    fn view(&mut self, model: &NucParModel, sender: Sender<NucParMsg>) {
-        model.nucs.generate(&self.gen_box, sender);
-    }
-
-    fn root_widget(&self) -> gtk::Box {
-        self.main_box.clone()
-    }
-}
-
 // RadPar Factory
 
 struct RadPar {
@@ -146,7 +122,7 @@ struct RadPar {
     amount_var: f64,
     dh1_val: f64,
     dh1_var: f64,
-    nucs: FactoryVec<NucPar>,
+    nucs: Vec<MicroComponent<NucParModel>>,
 }
 
 impl RadPar {
@@ -161,7 +137,7 @@ impl RadPar {
             amount_var: 0.0,
             dh1_val: 0.0,
             dh1_var: 0.0,
-            nucs: FactoryVec::new(),
+            nucs: Vec::new(),
         }
     }
 
@@ -211,6 +187,11 @@ pub struct RadParModel {
     pars: FactoryVecDeque<RadPar>,
     received_messages: u8,
 }
+
+// #[derive(relm4::Components)]
+// pub struct RadParComponents {
+//    nuc_factory: RelmComponent<NucParModel, RadParModel>,
+// }
 
 impl Model for RadParModel {
     type Msg = ParMsg;
