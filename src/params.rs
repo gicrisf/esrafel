@@ -65,9 +65,8 @@ impl MicroModel for NucParModel {
         sender: Sender<NucParMsg>,
     ) {
         match msg {
-            Add => {
-            }
-            Remove => {}
+            _Add => {}
+            _Remove => {}
         }
     }  // update
 }
@@ -95,10 +94,68 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
                 set_spacing: 10,
                 append: &gtk::Label::new(Some("Eqs")),
                 append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+            },
+            append: spin_entry = &gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 10,
+                append: &gtk::Label::new(Some("Spin")),
+                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+            },
+            append: hpf_entry = &gtk::Box {
+                set_orientation: gtk::Orientation::Horizontal,
+                set_spacing: 10,
+                append: &gtk::Label::new(Some("Hpf")),
+                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
             }
         }
     }
 }  // impl for NucParWidgets
+
+
+struct NucFacModel {
+   nucs: Vec<NucParModel>,
+}
+
+impl NucFacModel {
+    fn new() -> Self {
+        NucFacModel {
+            nucs: Vec::new(),
+        }
+    }
+}
+
+impl MicroModel for NucFacModel {
+    type Msg = NucParMsg;
+    type Widgets = NucFacWidgets;
+    type Data = ();
+
+   fn update(
+        &mut self,
+        msg: NucParMsg,
+        _data: &(),
+        sender: Sender<NucParMsg>,
+    ) {
+        match msg {
+            _Add => {}
+            _Remove => {}
+        }
+    }  // update
+}
+
+#[relm4::micro_widget]
+#[derive(Debug)]
+impl MicroWidgets<NucFacModel> for NucFacWidgets {
+    view! {
+        gtk::Box {
+            set_orientation: gtk::Orientation::Horizontal,
+            set_spacing: 5,
+            // TODO move buttons here
+            append = &gtk::Label {
+                set_label: "Boh, Factory",
+            }
+        }
+    }
+}
 
 // RadPar Factory
 
@@ -116,7 +173,7 @@ struct RadPar {
     amount_var: f64,
     dh1_val: f64,
     dh1_var: f64,
-    nucs: Vec<MicroComponent<NucParModel>>,
+    nuc_microfactory: MicroComponent<NucFacModel>,
 }
 
 impl RadPar {
@@ -131,7 +188,7 @@ impl RadPar {
             amount_var: 0.0,
             dh1_val: 0.0,
             dh1_var: 0.0,
-            nucs: Vec::new(),
+            nuc_microfactory: MicroComponent::new(NucFacModel::new(), ()),
         }
     }
 
@@ -316,15 +373,28 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         // counter.dh1_var = val;
                         println!("Add Nuc to Radical with {} index", index.current_index());
-                        counter.nucs.push(MicroComponent::new(NucParModel::new(), ()))
+
+                        match counter.nuc_microfactory.model_mut() {
+                            Ok(mut nucfac) => {
+                                nucfac.nucs.push(NucParModel::new());
+                            }
+                            // TODO Raise error
+                            _ => {}
+                        }
                     }
                 }
             }
             RadParMsg::RemoveNuc(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
-                        println!("Remove Nuc to Radical with {} index", index.current_index());
-                        counter.nucs.pop();
+                        println!("Remove last Nuc from Radical with {} index", index.current_index());
+                        match counter.nuc_microfactory.model_mut() {
+                            Ok(mut nucfac) => {
+                                nucfac.nucs.pop();
+                            }
+                            // TODO Raise error
+                            _ => {}
+                        }
                     }
                 }
             }
@@ -461,44 +531,28 @@ impl FactoryPrototype for RadPar {
                         },
                     },
                 },
-                append: nucs_box = &gtk::Box {
-                    set_orientation: gtk::Orientation::Vertical,
+                append: nuc_factory_box = &gtk::Box {
+                    set_orientation: gtk::Orientation::Horizontal,
                     set_spacing: 10,
-                    append = append = &gtk::Button {
-                        set_label: "Add Nuc",
-                        connect_clicked(sender, key) => move |val| {
-                            send!(sender, RadParMsg::AddNuc(key.downgrade()));
-                        }
-                    },
-                    append = &gtk::Button::with_label("Remove Nuc") {
-                        connect_clicked(sender, key) => move |val| {
-                            send!(sender, RadParMsg::RemoveNuc(key.downgrade()));
-                        }
-                    },
-                    append: nuc_box = &gtk::Box {
-                        set_orientation: gtk::Orientation::Horizontal,
+                    append = &gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
                         set_spacing: 10,
-                        append: eqs_entry = &gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_spacing: 10,
-                            append: &gtk::Label::new(Some("Eqs")),
-                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        append = &gtk::Button {
+                            set_label: "Add Nuc",
+                            connect_clicked(sender, key) => move |val| {
+                                send!(sender, RadParMsg::AddNuc(key.downgrade()));
+                            }
                         },
-                        append: spin_entry = &gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_spacing: 10,
-                            // Could justify the text, but not gonna do this in a stage this early
-                            append: &gtk::Label::new(Some("Spin")),
-                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
+                        append = &gtk::Button::with_label("Remove Nuc") {
+                            connect_clicked(sender, key) => move |val| {
+                                send!(sender, RadParMsg::RemoveNuc(key.downgrade()));
+                            }
                         },
-                        append: hpf_entry = &gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
-                            set_spacing: 10,
-                            append: &gtk::Label::new(Some("Hpf")),
-                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                            append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-                        },
+                    },
+                    append: nucs_box = &gtk::Box {
+                        set_orientation: gtk::Orientation::Vertical,
+                        set_spacing: 10,
+                        append: self.nuc_microfactory.root_widget(),
                     }
                 }
             },
