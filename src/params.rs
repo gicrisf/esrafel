@@ -119,60 +119,6 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
     }
 }  // impl for NucParWidgets
 
-
-struct NucFactoryModel {}
-
-impl NucFactoryModel {
-    fn new() -> Self {
-        NucFactoryModel {}
-    }
-}
-
-impl MicroModel for NucFactoryModel {
-    type Msg = NucParMsg;
-    type Widgets = NucFacWidgets;
-    type Data = ();
-
-   fn update(
-        &mut self,
-        msg: NucParMsg,
-        _data: &(),
-        sender: Sender<NucParMsg>,
-    ) {
-        match msg {
-            _Add => {}
-            _Remove => {}
-        }
-    }  // update
-}
-
-#[relm4::micro_widget]
-#[derive(Debug)]
-impl MicroWidgets<NucFactoryModel> for NucFacWidgets {
-    view! {
-        gtk::Box {
-            set_orientation: gtk::Orientation::Horizontal,
-            set_spacing: 5,
-            append = &gtk::Label {
-                set_label: "Boh, Factory",
-            },
-            append: main_box = &gtk::Box {
-
-            }
-        }
-    }
-
-    /*
-    fn pre_view() {
-        for nuc in &model.nucs {
-            if !nuc.is_connected() {
-                self.main_box.append(nuc.root_widget());
-            }
-        }
-    }
-    */
-}
-
 // RadPar Factory
 
 struct RadPar {
@@ -190,7 +136,6 @@ struct RadPar {
     dh1_val: f64,
     dh1_var: f64,
     nucs: Vec<MicroComponent<NucParModel>>,
-    nuc_microfactory: MicroComponent<NucFactoryModel>,
 }
 
 impl RadPar {
@@ -206,7 +151,6 @@ impl RadPar {
             dh1_val: 0.0,
             dh1_var: 0.0,
             nucs: Vec::new(),
-            nuc_microfactory: MicroComponent::new(NucFactoryModel::new(), ()),
         }
     }
 
@@ -408,25 +352,6 @@ impl ComponentUpdate<AppModel> for RadParModel {
                         counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
                         // Update counter
                         self.nuc_counter = self.nuc_counter.wrapping_add(1);
-
-                        // Now update the GUI
-                        match counter.nuc_microfactory.model_mut() {
-                            Ok(mut nuc_factory) => {
-                                // nucfac.nucs.push(MicroComponent::new(NucParModel::new(), ()));
-                                for nuc in &counter.nucs {
-                                    let mut nuc_model = nuc.model_mut().expect("Cannot load nuclei from simulator");
-
-                                    // Do stuff with model
-                                    // Can we just erase nuc microfactory?
-
-                                    // Make sure to drop the mutable reference before updating the view
-                                    drop(nuc_model);
-                                    nuc.update_view().unwrap();
-                                }
-                            }
-                            // TODO Raise error
-                            _ => {}
-                        }
                     }
                 }
             }
@@ -437,28 +362,6 @@ impl ComponentUpdate<AppModel> for RadParModel {
                         counter.nucs.pop();
                         // Update counter
                         self.nuc_counter = self.nuc_counter.wrapping_sub(1);
-
-                        // Now update the GUI
-                        match counter.nuc_microfactory.model_mut() {
-                            Ok(mut nuc_factory) => {
-                                // nucfac.nucs.push(MicroComponent::new(NucParModel::new(), ()));
-                                for nuc in &counter.nucs {
-                                    // let nuc_model = nuc.model_mut().expect("Cannot load nuclei from simulator");
-
-                                    // Do stuff with model
-                                    // Can we just erase nuc microfactory?
-                                    if !nuc.is_connected() {
-                                        // nuc_factory.main_box.append(nuc_model.root_widget());
-                                    }
-
-                                    // Make sure to drop the mutable reference before updating the view
-                                    // drop(nuc_model);
-                                    nuc.update_view().unwrap();
-                                }
-                            }
-                            // TODO Raise error
-                            _ => {}
-                        }
                     }
                 }
             }
@@ -616,12 +519,16 @@ impl FactoryPrototype for RadPar {
                     append: nucs_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_spacing: 10,
-                        append: self.nuc_microfactory.root_widget(),
+                        append: nucs_listbox = &gtk::ListBox {}
                     }
                 }
             },
             append: &gtk::Separator::new(gtk::Orientation::Horizontal),
         }
+    }
+
+    fn pre_view() {
+        widgets.nucs_listbox.append(self.nucs.last().unwrap().root_widget());
     }
 
     fn position(&self, _index: &DynamicIndex) {}
