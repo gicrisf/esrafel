@@ -7,7 +7,7 @@ use gtk::{
 use relm4::{
     gtk, send,
     MicroComponent, MicroModel, MicroWidgets, ComponentUpdate, Model, Sender, Widgets,
-    factory::{Factory, FactoryVec, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
+    factory::{Factory, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
 };
 
 use crate::{AppModel, AppMsg};
@@ -51,6 +51,14 @@ impl NucParModel {
             1000.0  // page_size
         )
     }  // adjustment
+
+    fn to_nuc(&self) -> Nucleus {
+        Nucleus {
+            eqs: Param::set(self.eqs as f64, 0.0),
+            spin: Param::set(self.spin_val, self.spin_var),
+            hpf: Param::set(self.hpf_val, self.hpf_var),
+        }
+    }
 }
 
 impl MicroModel for NucParModel {
@@ -65,8 +73,8 @@ impl MicroModel for NucParModel {
         sender: Sender<NucParMsg>,
     ) {
         match msg {
-            _Add => {}
-            _Remove => {}
+            _add => {}
+            _remove => {}
         }
     }  // update
 }
@@ -112,19 +120,16 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 }  // impl for NucParWidgets
 
 
-struct NucFacModel {
-   nucs: Vec<NucParModel>,
+struct NucFactoryModel {
 }
 
-impl NucFacModel {
+impl NucFactoryModel {
     fn new() -> Self {
-        NucFacModel {
-            nucs: Vec::new(),
-        }
+        NucFactoryModel {}
     }
 }
 
-impl MicroModel for NucFacModel {
+impl MicroModel for NucFactoryModel {
     type Msg = NucParMsg;
     type Widgets = NucFacWidgets;
     type Data = ();
@@ -144,17 +149,29 @@ impl MicroModel for NucFacModel {
 
 #[relm4::micro_widget]
 #[derive(Debug)]
-impl MicroWidgets<NucFacModel> for NucFacWidgets {
+impl MicroWidgets<NucFactoryModel> for NucFacWidgets {
     view! {
         gtk::Box {
             set_orientation: gtk::Orientation::Horizontal,
             set_spacing: 5,
-            // TODO move buttons here
             append = &gtk::Label {
                 set_label: "Boh, Factory",
+            },
+            append: main_box = &gtk::Box {
+
             }
         }
     }
+
+    /*
+    fn pre_view() {
+        for nuc in &model.nucs {
+            if !nuc.is_connected() {
+                self.main_box.append(nuc.root_widget());
+            }
+        }
+    }
+    */
 }
 
 // RadPar Factory
@@ -173,7 +190,8 @@ struct RadPar {
     amount_var: f64,
     dh1_val: f64,
     dh1_var: f64,
-    nuc_microfactory: MicroComponent<NucFacModel>,
+    nucs: Vec<MicroComponent<NucParModel>>,
+    nuc_microfactory: MicroComponent<NucFactoryModel>,
 }
 
 impl RadPar {
@@ -188,7 +206,8 @@ impl RadPar {
             amount_var: 0.0,
             dh1_val: 0.0,
             dh1_var: 0.0,
-            nuc_microfactory: MicroComponent::new(NucFacModel::new(), ()),
+            nucs: Vec::new(),
+            nuc_microfactory: MicroComponent::new(NucFactoryModel::new(), ()),
         }
     }
 
@@ -204,13 +223,26 @@ impl RadPar {
     }  // adjustment
 
     fn to_rad(&self) -> Radical {
+
+        let nucs = self.nucs.iter().map(|nuc_component| {
+            match nuc_component.model() {
+                Ok(nuc_model) => {
+                   nuc_model.to_nuc()
+                }
+                _ => {
+                    // TODO raise error about nucleus conversion
+                    Nucleus::set(0.0, 0.0, 0.0)
+                }
+            }
+        }).collect::<Vec<Nucleus>>();
+
+
         Radical {
             lwa: Param::set(self.lwa_val, self.lwa_var),
             lrtz: Param::set(self.lrtz_val, self.lrtz_var),
             amount: Param::set(self.amount_val, self.amount_var),
             dh1: Param::set(self.dh1_val, self.dh1_var),
-            // TODO nucs setter
-            nucs: Vec::new(),
+            nucs,
         }
     }
 }
@@ -238,6 +270,7 @@ pub enum RadParMsg {
 
 pub struct RadParModel {
     pars: FactoryVecDeque<RadPar>,
+    nuc_counter: u8,
     received_messages: u8,
 }
 
@@ -256,6 +289,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
     fn init_model(_parent_model: &AppModel) -> Self {
         RadParModel {
             pars: FactoryVecDeque::new(),
+            nuc_counter: 0,
             received_messages: 0,
         }
     }
@@ -371,12 +405,14 @@ impl ComponentUpdate<AppModel> for RadParModel {
             RadParMsg::AddNuc(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
-                        // counter.dh1_var = val;
+                        self.nuc_counter = self.nuc_counter.wrapping_add(1);
+                        counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
+
                         println!("Add Nuc to Radical with {} index", index.current_index());
 
                         match counter.nuc_microfactory.model_mut() {
                             Ok(mut nucfac) => {
-                                nucfac.nucs.push(NucParModel::new());
+                                // nucfac.nucs.push(MicroComponent::new(NucParModel::new(), ()));
                             }
                             // TODO Raise error
                             _ => {}
@@ -387,10 +423,13 @@ impl ComponentUpdate<AppModel> for RadParModel {
             RadParMsg::RemoveNuc(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        self.nuc_counter = self.nuc_counter.wrapping_sub(1);
+                        counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
+
                         println!("Remove last Nuc from Radical with {} index", index.current_index());
                         match counter.nuc_microfactory.model_mut() {
                             Ok(mut nucfac) => {
-                                nucfac.nucs.pop();
+                                // nucfac.nucs.pop();
                             }
                             // TODO Raise error
                             _ => {}
