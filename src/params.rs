@@ -10,6 +10,8 @@ use relm4::{
     factory::{Factory, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
 };
 
+use gio::ListStore;
+
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Nucleus, Param};
 
@@ -118,6 +120,60 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
         }
     }
 }  // impl for NucParWidgets
+
+// Factory Microcomponent (manual)
+
+struct NucFactoryModel {
+    // TODO implement GLib Object subclass, then go back here
+    // listbox_model: ListStore<NucParObject>,
+}
+
+impl NucFactoryModel {
+    fn new() -> Self {
+        NucFactoryModel {
+            // listbox_model: ListStore::new(NucParObject::static_type()),
+        }
+    }
+}
+
+impl MicroModel for NucFactoryModel {
+    type Msg = NucParMsg;
+    type Widgets = NucFacWidgets;
+    type Data = ();
+
+   fn update(&mut self, msg: NucParMsg, _data: &(), _sender: Sender<NucParMsg>,) {
+        match msg {
+            _Add => {}
+            _Remove => {}
+        }
+    }  // update
+}
+
+#[derive(Debug)]
+struct NucFacWidgets {
+    root: gtk::Box,
+    nuc_name: gtk::Label,
+}
+
+impl MicroWidgets<NucFactoryModel> for NucFacWidgets {
+    type Root = gtk::Box;
+
+    fn init_view(model: &NucFactoryModel, sender: Sender<NucParMsg>) -> Self {
+        let root = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        let nuc_name = gtk::Label::new(Some("Nucleus"));
+
+        NucFacWidgets { root, nuc_name }
+    }
+
+    fn view(&mut self, model: &NucFactoryModel, _sender: Sender<NucParMsg>) {
+        self.nuc_name.set_text("Nucleus");
+    }
+
+    fn root_widget(&self) -> Self::Root {
+        self.root.clone()
+    }
+
+}
 
 // RadPar Factory
 
