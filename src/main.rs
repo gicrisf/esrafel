@@ -240,6 +240,8 @@ impl AppUpdate for AppModel {
         match msg {
             AppMsg::UpdateRads(new_rads) => {
                 self.rads = new_rads;
+                // DEBUGGING ONLY
+                println!("{:?}", self.rads);
             }
             AppMsg::IterMontecarlo => {
                 // This is a fast and working solution, but a persistent iteration is not an elegant move
