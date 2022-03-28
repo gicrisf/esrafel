@@ -120,8 +120,7 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 }  // impl for NucParWidgets
 
 
-struct NucFactoryModel {
-}
+struct NucFactoryModel {}
 
 impl NucFactoryModel {
     fn new() -> Self {
@@ -405,14 +404,25 @@ impl ComponentUpdate<AppModel> for RadParModel {
             RadParMsg::AddNuc(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
-                        self.nuc_counter = self.nuc_counter.wrapping_add(1);
+                        // println!("Add Nuc to Radical Model with {} index", index.current_index());
                         counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
+                        // Update counter
+                        self.nuc_counter = self.nuc_counter.wrapping_add(1);
 
-                        println!("Add Nuc to Radical with {} index", index.current_index());
-
+                        // Now update the GUI
                         match counter.nuc_microfactory.model_mut() {
-                            Ok(mut nucfac) => {
+                            Ok(mut nuc_factory) => {
                                 // nucfac.nucs.push(MicroComponent::new(NucParModel::new(), ()));
+                                for nuc in &counter.nucs {
+                                    let mut nuc_model = nuc.model_mut().expect("Cannot load nuclei from simulator");
+
+                                    // Do stuff with model
+                                    // Can we just erase nuc microfactory?
+
+                                    // Make sure to drop the mutable reference before updating the view
+                                    drop(nuc_model);
+                                    nuc.update_view().unwrap();
+                                }
                             }
                             // TODO Raise error
                             _ => {}
@@ -423,13 +433,28 @@ impl ComponentUpdate<AppModel> for RadParModel {
             RadParMsg::RemoveNuc(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        // println!("Remove last Nuc from Radical Model with {} index", index.current_index());
+                        counter.nucs.pop();
+                        // Update counter
                         self.nuc_counter = self.nuc_counter.wrapping_sub(1);
-                        counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
 
-                        println!("Remove last Nuc from Radical with {} index", index.current_index());
+                        // Now update the GUI
                         match counter.nuc_microfactory.model_mut() {
-                            Ok(mut nucfac) => {
-                                // nucfac.nucs.pop();
+                            Ok(mut nuc_factory) => {
+                                // nucfac.nucs.push(MicroComponent::new(NucParModel::new(), ()));
+                                for nuc in &counter.nucs {
+                                    // let nuc_model = nuc.model_mut().expect("Cannot load nuclei from simulator");
+
+                                    // Do stuff with model
+                                    // Can we just erase nuc microfactory?
+                                    if !nuc.is_connected() {
+                                        // nuc_factory.main_box.append(nuc_model.root_widget());
+                                    }
+
+                                    // Make sure to drop the mutable reference before updating the view
+                                    // drop(nuc_model);
+                                    nuc.update_view().unwrap();
+                                }
                             }
                             // TODO Raise error
                             _ => {}
