@@ -1,10 +1,7 @@
 // use adw::prelude::BinExt;
 
 use gtk::{
-    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, FilterExt, SorterExt},
-    subclass::prelude::*,
-    glib::{self, Cast, Object, ObjectExt, ParamFlags, ParamSpec, ParamSpecInt, StaticType,
-           ToValue, Value,},
+    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, Cast, ObjectExt},
     gio,
     };
 
@@ -16,11 +13,11 @@ use relm4::{
 
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Nucleus, Param};
-
-use std::cell::Cell;
-use once_cell::sync::Lazy;
+use crate::nuc_object::NucObject;
 
 // NucPar Component
+// TODO: use the GLib Object
+// Define getters and setters
 
 #[derive(Debug)]
 enum NucParMsg {
@@ -132,82 +129,6 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 // So i prefer doing this in a compartimentalized microcomponent
 // And not messing with the proper Relm structure of the remaining panel
 
-// GLib Object section
-
-// Object holding the state
-#[derive(Default)]
-pub struct GIntegerObject {
-    number: Cell<i32>,
-}
-
-// The central trait for subclassing a GObject
-#[glib::object_subclass]
-impl ObjectSubclass for GIntegerObject {
-    const NAME: &'static str = "MyGtkAppIntegerObject";
-    type Type = IntegerObject;
-    type ParentType = glib::Object;
-}
-
-// Trait shared by all GObjects
-impl ObjectImpl for GIntegerObject {
-    fn properties() -> &'static [ParamSpec] {
-        static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
-            vec![ParamSpecInt::new(
-                // Name
-                "number",
-                // Nickname
-                "number",
-                // Short description
-                "number",
-                // Minimum value
-                i32::MIN,
-                // Maximum value
-                i32::MAX,
-                // Default value
-                0,
-                // The property can be read and written to
-                ParamFlags::READWRITE,
-            )]
-        });
-        PROPERTIES.as_ref()
-    }
-
-    fn set_property(&self, _obj: &Self::Type, _id: usize, value: &Value, pspec: &ParamSpec) {
-        match pspec.name() {
-            "number" => {
-                let input_number = value.get().expect("The value needs to be of type `i32`.");
-                self.number.replace(input_number);
-            }
-            _ => unimplemented!(),
-        }
-    }
-
-    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> Value {
-        match pspec.name() {
-            "number" => self.number.get().to_value(),
-            _ => unimplemented!(),
-        }
-    }
-}
-
-glib::wrapper! {
-    pub struct IntegerObject(ObjectSubclass<GIntegerObject>);
-}
-
-impl IntegerObject {
-    pub fn new(number: i32) -> Self {
-        Object::new(&[("number", &number)]).expect("Could not create `IntegerObject`.")
-    }
-
-    pub fn increase_number(self) {
-        let old_number: i32 = self.property("number");
-
-        self.set_property("number", old_number + 1);
-    }
-}
-
-// Microcomponent section
-
 struct NucFactoryModel {
     // TODO implement GLib Object subclass, then go back here
     // listbox_model: ListStore<NucParObject>,
@@ -218,7 +139,7 @@ impl NucFactoryModel {
     fn new() -> Self {
         NucFactoryModel {
             // listbox_model: ListStore::new(NucParObject::static_type()),
-            store: gio::ListStore::new(IntegerObject::static_type()),
+            store: gio::ListStore::new(NucObject::static_type()),
         }
     }
 }
@@ -230,11 +151,8 @@ impl MicroModel for NucFactoryModel {
 
    fn update(&mut self, msg: NucParMsg, _data: &(), _sender: Sender<NucParMsg>,) {
        match msg {
-           NucParMsg::Add(text) => {
-               let parse_res = text.parse();
-               if let Ok(num) = parse_res {
-                   self.store.append(&IntegerObject::new(num));
-               }
+           NucParMsg::Add(_text) => {
+               self.store.append(&NucObject::new());
            }
            NucParMsg::RemoveLast => {
                let index = self.store.n_items();
@@ -256,9 +174,9 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
 
     fn init_view(model: &NucFactoryModel, sender: Sender<NucParMsg>) -> Self {
         let main_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
-        let name = gtk::Entry::builder().placeholder_text("1").build();
-        let add = gtk::Button::with_label("Add");
-        let remove = gtk::Button::with_label("Remove");
+        let name = gtk::Entry::builder().placeholder_text("Nucleus").build();
+        let add = gtk::Button::with_label("Add new");
+        let remove = gtk::Button::with_label("Remove selected");
 
         let scroller = gtk::ScrolledWindow::builder()
             .hexpand(true)
@@ -294,9 +212,9 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                 "item",
             );
             let number_expression = gtk::PropertyExpression::new(
-                IntegerObject::static_type(),
+                NucObject::static_type(),
                 Some(&integer_object_expression),
-                "number",
+                "eqs",
             );
 
             // Bind "number" to "label"
@@ -304,20 +222,22 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
         });
 
         let filter = gtk::CustomFilter::new(move |obj| {
-            // Get `IntegerObject` from `glib::Object`
+            // Get `NucObject` from `glib::Object`
             let integer_object = obj
-                .downcast_ref::<IntegerObject>()
-                .expect("The object needs to be of type `IntegerObject`.");
+                .downcast_ref::<NucObject>()
+                .expect("The object needs to be of type `NucObject`.");
 
-            // Get property "number" from `IntegerObject`
-            let _number: i32 = integer_object.property("number");
+            // Get property "eqs" from `NucObject`
+            let _eqs: i32 = integer_object.property("eqs");
 
             // Uncomment to only allow even numbers
             // _number % 2 == 0
             true
         });
+
         let filter_model = gtk::FilterListModel::new(Some(&model.store), Some(&filter));
 
+        /*
         let sorter = gtk::CustomSorter::new(move |obj1, obj2| {
             // Get `IntegerObject` from `glib::Object`
             let integer_object_1 = obj1
@@ -335,26 +255,30 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
             number_2.cmp(&number_1).into()
         });
         let sort_model = gtk::SortListModel::new(Some(&filter_model), Some(&sorter));
+        */
+
+        let sort_model = gtk::SingleSelection::new(Some(&filter_model));
 
         let selection_model = gtk::SingleSelection::new(Some(&sort_model));
         let list_view = gtk::ListView::new(Some(&selection_model), Some(&factory));
 
+        /*
         list_view.connect_activate(move |list_view, position| {
             // Get `IntegerObject` from model
             let model = list_view.model().expect("The model has to exist.");
-            let integer_object = model
+            let nuc_object = model
                 .item(position)
                 .expect("The item has to exist.")
-                .downcast::<IntegerObject>()
-                .expect("The item has to be an `IntegerObject`.");
+                .downcast::<NucObject>()
+                .expect("The item has to be an `NucObject`.");
 
             // Increase "number" of `IntegerObject`
-            integer_object.increase_number();
+            // nuc_object.increase_number();
 
             // Notify that the filter and sorter has been changed
             filter.changed(gtk::FilterChange::Different);
-            sorter.changed(gtk::SorterChange::Different);
         });
+        */
 
         scroller.set_child(Some(&list_view));
 

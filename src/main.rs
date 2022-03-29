@@ -32,6 +32,7 @@ mod drawers;
 mod esr_io;
 mod sim;
 mod params;
+mod nuc_object;
 
 use sim::Radical;
 use drawers::{Line, Color};
