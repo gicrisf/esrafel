@@ -10,8 +10,8 @@ use relm4::{
     factory::{Factory, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
 };
 
-use gio::ListStore;
-
+use crate::row_data::RowData;
+use crate::nuc_list_box_row::ListBoxRow;
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Nucleus, Param};
 
@@ -126,12 +126,14 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 struct NucFactoryModel {
     // TODO implement GLib Object subclass, then go back here
     // listbox_model: ListStore<NucParObject>,
+    // listbox_model: ListStore<RowData>,
 }
 
 impl NucFactoryModel {
     fn new() -> Self {
         NucFactoryModel {
             // listbox_model: ListStore::new(NucParObject::static_type()),
+            // listbox_model: ListStore::new(RowData::static_type()),
         }
     }
 }
