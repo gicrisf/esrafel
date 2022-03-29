@@ -37,7 +37,7 @@ impl ObjectImpl for NucObject {
                     // Maximum value
                     i32::MAX,
                     // Default value
-                    0,
+                    1,
                     // The property can be read and written to
                     ParamFlags::READWRITE,
                 ),
@@ -47,7 +47,7 @@ impl ObjectImpl for NucObject {
                     "Spin value",
                     f32::MIN,
                     f32::MAX,
-                    0.0,
+                    0.5,
                     ParamFlags::READWRITE,
                 ),
                 glib::ParamSpecFloat::new(
@@ -65,7 +65,7 @@ impl ObjectImpl for NucObject {
                     "Hyperfine constant value",
                     f32::MIN,
                     f32::MAX,
-                    0.0,
+                    4.0,
                     ParamFlags::READWRITE,
                 ),
                 glib::ParamSpecFloat::new(
@@ -110,7 +110,7 @@ impl ObjectImpl for NucObject {
 
     fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> Value {
         match pspec.name() {
-            "number" => self.eqs.get().to_value(),
+            "eqs" => self.eqs.get().to_value(),
             "spinval" => self.spin_val.get().to_value(),
             "spinvar" => self.spin_var.get().to_value(),
             "hpfval" => self.hpf_val.get().to_value(),
