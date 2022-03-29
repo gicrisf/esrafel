@@ -9,19 +9,19 @@ use std::cell::RefCell;
 use crate::row_data::RowData;
 
 #[derive(Debug, Default)]
-pub struct Model(pub(super) RefCell<Vec<RowData>>);
+pub struct NucModel(pub(super) RefCell<Vec<RowData>>);
 
 /// Basic declaration of our type for the GObject type system
 #[glib::object_subclass]
-impl ObjectSubclass for Model {
-    const NAME: &'static str = "Model";
-    type Type = super::Model;
+impl ObjectSubclass for NucModel {
+    const NAME: &'static str = "NucModel";
+    type Type = super::NucModel;
     type Interfaces = (gio::ListModel,);
 }
 
-impl ObjectImpl for Model {}
+impl ObjectImpl for NucModel {}
 
-impl ListModelImpl for Model {
+impl ListModelImpl for NucModel {
     fn item_type(&self, _list_model: &Self::Type) -> glib::Type {
         RowData::static_type()
     }

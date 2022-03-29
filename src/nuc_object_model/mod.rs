@@ -10,12 +10,12 @@ use gtk::{gio, glib, prelude::*};
 
 // Public part of the Model type.
 glib::wrapper! {
-    pub struct Model(ObjectSubclass<imp::Model>) @implements gio::ListModel;
+    pub struct NucModel(ObjectSubclass<imp::NucModel>) @implements gio::ListModel;
 }
 
 // Constructor for new instances. This simply calls glib::Object::new()
-impl Model {
-    pub fn new() -> Model {
+impl NucModel {
+    pub fn new() -> NucModel {
         glib::Object::new(&[]).expect("Failed to create Model")
     }
 
@@ -41,7 +41,7 @@ impl Model {
     }
 }
 
-impl Default for Model {
+impl Default for NucModel {
     fn default() -> Self {
         Self::new()
     }

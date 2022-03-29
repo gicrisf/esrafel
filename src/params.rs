@@ -2,6 +2,7 @@
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, OrientableExt},
+    glib::{self, clone},
     };
 
 use relm4::{
@@ -12,6 +13,8 @@ use relm4::{
 
 use crate::row_data::RowData;
 use crate::nuc_list_box_row::ListBoxRow;
+use crate::nuc_object_model::NucModel;
+
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Nucleus, Param};
 
@@ -122,25 +125,29 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 }  // impl for NucParWidgets
 
 // Factory Microcomponent (manual)
+// This is needed ONLY because I have to write widgets manually
+// (without the `view` macro)
+// So i prefer doing this in a compartimentalized microcomponent
+// And not messing with the proper Relm structure of the remaining panel
 
 struct NucFactoryModel {
     // TODO implement GLib Object subclass, then go back here
     // listbox_model: ListStore<NucParObject>,
-    // listbox_model: ListStore<RowData>,
+    listbox_model: NucModel<>,
 }
 
 impl NucFactoryModel {
     fn new() -> Self {
         NucFactoryModel {
             // listbox_model: ListStore::new(NucParObject::static_type()),
-            // listbox_model: ListStore::new(RowData::static_type()),
+            listbox_model: NucModel::new(),
         }
     }
 }
 
 impl MicroModel for NucFactoryModel {
     type Msg = NucParMsg;
-    type Widgets = NucFacWidgets;
+    type Widgets = NucFactoryWidgets;
     type Data = ();
 
    fn update(&mut self, msg: NucParMsg, _data: &(), _sender: Sender<NucParMsg>,) {
@@ -152,27 +159,34 @@ impl MicroModel for NucFactoryModel {
 }
 
 #[derive(Debug)]
-struct NucFacWidgets {
-    root: gtk::Box,
-    nuc_name: gtk::Label,
+struct NucFactoryWidgets {
+    vbox: gtk::Box,
+    listbox: gtk::ListBox,
 }
 
-impl MicroWidgets<NucFactoryModel> for NucFacWidgets {
+impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
     type Root = gtk::Box;
 
     fn init_view(model: &NucFactoryModel, sender: Sender<NucParMsg>) -> Self {
-        let root = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-        let nuc_name = gtk::Label::new(Some("Nucleus"));
+        let vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
-        NucFacWidgets { root, nuc_name }
+        let listbox = gtk::ListBox::new();
+        // listbox bind model somehow
+
+        let add_button = gtk::Button::with_label("Add");
+        hbox.append(&add_button);
+        vbox.append(&hbox);
+
+        NucFactoryWidgets { vbox, listbox }
     }
 
     fn view(&mut self, model: &NucFactoryModel, _sender: Sender<NucParMsg>) {
-        self.nuc_name.set_text("Nucleus");
+        // Do things
     }
 
     fn root_widget(&self) -> Self::Root {
-        self.root.clone()
+        self.vbox.clone()
     }
 
 }
@@ -193,6 +207,7 @@ struct RadPar {
     amount_var: f64,
     dh1_val: f64,
     dh1_var: f64,
+    nuc_factory: MicroComponent<NucFactoryModel>,
     nucs: Vec<MicroComponent<NucParModel>>,
 }
 
@@ -208,6 +223,7 @@ impl RadPar {
             amount_var: 0.0,
             dh1_val: 0.0,
             dh1_var: 0.0,
+            nuc_factory: MicroComponent::new(NucFactoryModel::new(), ()),
             nucs: Vec::new(),
         }
     }
@@ -577,7 +593,10 @@ impl FactoryPrototype for RadPar {
                     append: nucs_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_spacing: 10,
-                        append: nucs_listbox = &gtk::ListBox {}
+                        // TODO del this one...
+                        append: nucs_listbox = &gtk::ListBox {},
+                        // for this one... Maintaining both until I'm not 100% sure about this change
+                        append: self.nuc_factory.root_widget(),
                     }
                 }
             },
