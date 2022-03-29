@@ -33,10 +33,6 @@ mod esr_io;
 mod sim;
 mod params;
 
-mod nuc_list_box_row;
-mod nuc_object_model;
-mod row_data;
-
 use sim::Radical;
 use drawers::{Line, Color};
 use params::RadParModel;

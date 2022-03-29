@@ -1,8 +1,11 @@
 // use adw::prelude::BinExt;
 
 use gtk::{
-    prelude::{BoxExt, ButtonExt, OrientableExt},
-    glib::{self, clone},
+    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, FilterExt, SorterExt},
+    subclass::prelude::*,
+    glib::{self, Cast, Object, ObjectExt, ParamFlags, ParamSpec, ParamSpecInt, StaticType,
+           ToValue, Value,},
+    gio,
     };
 
 use relm4::{
@@ -14,12 +17,15 @@ use relm4::{
 use crate::{AppModel, AppMsg};
 use crate::sim::{Radical, Nucleus, Param};
 
+use std::cell::Cell;
+use once_cell::sync::Lazy;
+
 // NucPar Component
 
 #[derive(Debug)]
 enum NucParMsg {
-    Add,
-    Remove,
+    Add(String),
+    RemoveLast,
 }
 
 #[derive(Debug)]
@@ -92,11 +98,11 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
             },
             append = &gtk::Button {
                 set_label: "Add",
-                connect_clicked(sender) => move |_| send!(sender, NucParMsg::Add),
+                // connect_clicked(sender) => move |_| send!(sender, NucParMsg::Add),
             },
             append = &gtk::Button {
                 set_label: "Del",
-                connect_clicked(sender) => move |_| send!(sender, NucParMsg::Remove),
+                // connect_clicked(sender) => move |_| send!(sender, NucParMsg::Remove),
             },
             append: eqs_entry = &gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
@@ -126,17 +132,93 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 // So i prefer doing this in a compartimentalized microcomponent
 // And not messing with the proper Relm structure of the remaining panel
 
+// GLib Object section
+
+// Object holding the state
+#[derive(Default)]
+pub struct GIntegerObject {
+    number: Cell<i32>,
+}
+
+// The central trait for subclassing a GObject
+#[glib::object_subclass]
+impl ObjectSubclass for GIntegerObject {
+    const NAME: &'static str = "MyGtkAppIntegerObject";
+    type Type = IntegerObject;
+    type ParentType = glib::Object;
+}
+
+// Trait shared by all GObjects
+impl ObjectImpl for GIntegerObject {
+    fn properties() -> &'static [ParamSpec] {
+        static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
+            vec![ParamSpecInt::new(
+                // Name
+                "number",
+                // Nickname
+                "number",
+                // Short description
+                "number",
+                // Minimum value
+                i32::MIN,
+                // Maximum value
+                i32::MAX,
+                // Default value
+                0,
+                // The property can be read and written to
+                ParamFlags::READWRITE,
+            )]
+        });
+        PROPERTIES.as_ref()
+    }
+
+    fn set_property(&self, _obj: &Self::Type, _id: usize, value: &Value, pspec: &ParamSpec) {
+        match pspec.name() {
+            "number" => {
+                let input_number = value.get().expect("The value needs to be of type `i32`.");
+                self.number.replace(input_number);
+            }
+            _ => unimplemented!(),
+        }
+    }
+
+    fn property(&self, _obj: &Self::Type, _id: usize, pspec: &ParamSpec) -> Value {
+        match pspec.name() {
+            "number" => self.number.get().to_value(),
+            _ => unimplemented!(),
+        }
+    }
+}
+
+glib::wrapper! {
+    pub struct IntegerObject(ObjectSubclass<GIntegerObject>);
+}
+
+impl IntegerObject {
+    pub fn new(number: i32) -> Self {
+        Object::new(&[("number", &number)]).expect("Could not create `IntegerObject`.")
+    }
+
+    pub fn increase_number(self) {
+        let old_number: i32 = self.property("number");
+
+        self.set_property("number", old_number + 1);
+    }
+}
+
+// Microcomponent section
+
 struct NucFactoryModel {
     // TODO implement GLib Object subclass, then go back here
     // listbox_model: ListStore<NucParObject>,
-    listbox_model: NucModel<>,
+    store: gio::ListStore,
 }
 
 impl NucFactoryModel {
     fn new() -> Self {
         NucFactoryModel {
             // listbox_model: ListStore::new(NucParObject::static_type()),
-            listbox_model: NucModel::new(),
+            store: gio::ListStore::new(IntegerObject::static_type()),
         }
     }
 }
@@ -147,34 +229,136 @@ impl MicroModel for NucFactoryModel {
     type Data = ();
 
    fn update(&mut self, msg: NucParMsg, _data: &(), _sender: Sender<NucParMsg>,) {
-        match msg {
-            _Add => {}
-            _Remove => {}
-        }
+       match msg {
+           NucParMsg::Add(text) => {
+               let parse_res = text.parse();
+               if let Ok(num) = parse_res {
+                   self.store.append(&IntegerObject::new(num));
+               }
+           }
+           NucParMsg::RemoveLast => {
+               let index = self.store.n_items();
+               if index != 0 {
+                   self.store.remove(index - 1);
+               }
+           }
+       }
     }  // update
 }
 
 #[derive(Debug)]
 struct NucFactoryWidgets {
-    vbox: gtk::Box,
-    listbox: gtk::ListBox,
+    main_box: gtk::Box,
 }
 
 impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
     type Root = gtk::Box;
 
     fn init_view(model: &NucFactoryModel, sender: Sender<NucParMsg>) -> Self {
-        let vbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
-        let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+        let main_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
+        let name = gtk::Entry::builder().placeholder_text("1").build();
+        let add = gtk::Button::with_label("Add");
+        let remove = gtk::Button::with_label("Remove");
 
-        let listbox = gtk::ListBox::new();
-        // listbox bind model somehow
+        let scroller = gtk::ScrolledWindow::builder()
+            .hexpand(true)
+            .vexpand(true)
+            .build();
 
-        let add_button = gtk::Button::with_label("Add");
-        hbox.append(&add_button);
-        vbox.append(&hbox);
+        main_box.append(&name);
+        main_box.append(&add);
+        main_box.append(&remove);
+        main_box.append(&scroller);
 
-        NucFactoryWidgets { vbox, listbox }
+        let sender2 = sender.clone();
+        add.connect_clicked(move |_| {
+            let text: String = name.text().into();
+            sender2.send(NucParMsg::Add(text)).unwrap();
+        });
+
+        remove.connect_clicked(move |_| {
+            sender.send(NucParMsg::RemoveLast).unwrap();
+        });
+
+        let factory = gtk::SignalListItemFactory::new();
+        factory.connect_setup(move |_, list_item| {
+            // Create label
+            let label = gtk::Label::new(None);
+            list_item.set_child(Some(&label));
+
+            // Create expression describing `list_item->item->number`
+            let list_item_expression = gtk::ConstantExpression::new(list_item);
+            let integer_object_expression = gtk::PropertyExpression::new(
+                gtk::ListItem::static_type(),
+                Some(&list_item_expression),
+                "item",
+            );
+            let number_expression = gtk::PropertyExpression::new(
+                IntegerObject::static_type(),
+                Some(&integer_object_expression),
+                "number",
+            );
+
+            // Bind "number" to "label"
+            number_expression.bind(&label, "label", Some(&label));
+        });
+
+        let filter = gtk::CustomFilter::new(move |obj| {
+            // Get `IntegerObject` from `glib::Object`
+            let integer_object = obj
+                .downcast_ref::<IntegerObject>()
+                .expect("The object needs to be of type `IntegerObject`.");
+
+            // Get property "number" from `IntegerObject`
+            let _number: i32 = integer_object.property("number");
+
+            // Uncomment to only allow even numbers
+            // _number % 2 == 0
+            true
+        });
+        let filter_model = gtk::FilterListModel::new(Some(&model.store), Some(&filter));
+
+        let sorter = gtk::CustomSorter::new(move |obj1, obj2| {
+            // Get `IntegerObject` from `glib::Object`
+            let integer_object_1 = obj1
+                .downcast_ref::<IntegerObject>()
+                .expect("The object needs to be of type `IntegerObject`.");
+            let integer_object_2 = obj2
+                .downcast_ref::<IntegerObject>()
+                .expect("The object needs to be of type `IntegerObject`.");
+
+            // Get property "number" from `IntegerObject`
+            let number_1: i32 = integer_object_1.property("number");
+            let number_2: i32 = integer_object_2.property("number");
+
+            // Reverse sorting order -> large numbers come first
+            number_2.cmp(&number_1).into()
+        });
+        let sort_model = gtk::SortListModel::new(Some(&filter_model), Some(&sorter));
+
+        let selection_model = gtk::SingleSelection::new(Some(&sort_model));
+        let list_view = gtk::ListView::new(Some(&selection_model), Some(&factory));
+
+        list_view.connect_activate(move |list_view, position| {
+            // Get `IntegerObject` from model
+            let model = list_view.model().expect("The model has to exist.");
+            let integer_object = model
+                .item(position)
+                .expect("The item has to exist.")
+                .downcast::<IntegerObject>()
+                .expect("The item has to be an `IntegerObject`.");
+
+            // Increase "number" of `IntegerObject`
+            integer_object.increase_number();
+
+            // Notify that the filter and sorter has been changed
+            filter.changed(gtk::FilterChange::Different);
+            sorter.changed(gtk::SorterChange::Different);
+        });
+
+        scroller.set_child(Some(&list_view));
+
+        NucFactoryWidgets { main_box }
     }
 
     fn view(&mut self, model: &NucFactoryModel, _sender: Sender<NucParMsg>) {
@@ -182,7 +366,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
     }
 
     fn root_widget(&self) -> Self::Root {
-        self.vbox.clone()
+        self.main_box.clone()
     }
 
 }
