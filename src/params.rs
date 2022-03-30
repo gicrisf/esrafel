@@ -17,7 +17,6 @@ use crate::nuc_object::NucObject;
 
 // NucPar Component
 // TODO: use the GLib Object
-// Define getters and setters
 
 #[derive(Debug)]
 enum NucParMsg {
@@ -191,11 +190,11 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
         let sender2 = sender.clone();
         add.connect_clicked(move |_| {
             let text: String = name.text().into();
-            sender2.send(NucParMsg::Add(text)).unwrap();
+            send!(sender2, NucParMsg::Add(text));
         });
 
         remove.connect_clicked(move |_| {
-            sender.send(NucParMsg::RemoveLast).unwrap();
+            send!(sender, NucParMsg::RemoveLast);
         });
 
         let factory = gtk::SignalListItemFactory::new();
@@ -204,7 +203,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
             let label = gtk::Label::new(None);
             list_item.set_child(Some(&label));
 
-            // Create expression describing `list_item->item->number`
+            // Create expression describing `list_item->item->eqs`
             let list_item_expression = gtk::ConstantExpression::new(list_item);
             let integer_object_expression = gtk::PropertyExpression::new(
                 gtk::ListItem::static_type(),
@@ -285,7 +284,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
         NucFactoryWidgets { main_box }
     }
 
-    fn view(&mut self, model: &NucFactoryModel, _sender: Sender<NucParMsg>) {
+    fn view(&mut self, _model: &NucFactoryModel, _sender: Sender<NucParMsg>) {
         // Do things
     }
 
