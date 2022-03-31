@@ -197,51 +197,6 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
             send!(sender, NucParMsg::RemoveLast);
         });
 
-        let factory = gtk::SignalListItemFactory::new();
-        factory.connect_setup(move |_, list_item| {
-            // Create label
-            let label = gtk::Label::new(None);
-            list_item.set_child(Some(&label));
-
-            // Create expression describing `list_item->item->eqs`
-            let list_item_expression = gtk::ConstantExpression::new(list_item);
-            let integer_object_expression = gtk::PropertyExpression::new(
-                gtk::ListItem::static_type(),
-                Some(&list_item_expression),
-                "item",
-            );
-            let number_expression = gtk::PropertyExpression::new(
-                NucObject::static_type(),
-                Some(&integer_object_expression),
-                "eqs",
-            );
-
-            // Bind "number" to "label"
-            number_expression.bind(&label, "label", Some(&label));
-        });
-
-        let filter = gtk::CustomFilter::new(move |obj| {
-            // Get `NucObject` from `glib::Object`
-            let integer_object = obj
-                .downcast_ref::<NucObject>()
-                .expect("The object needs to be of type `NucObject`.");
-
-            // Get property "eqs" from `NucObject`
-            let _eqs: i32 = integer_object.property("eqs");
-
-            // Uncomment to only allow even numbers
-            // _number % 2 == 0
-            true
-        });
-
-        let filter_model = gtk::FilterListModel::new(Some(&model.store), Some(&filter));
-        let sort_model = gtk::SingleSelection::new(Some(&filter_model));
-        let selection_model = gtk::SingleSelection::new(Some(&sort_model));
-
-        // TODO use a list_box instead of list_view
-        let list_view = gtk::ListView::new(Some(&selection_model), Some(&factory));
-        scroller.set_child(Some(&list_view));
-
         let list_box = gtk::ListBox::new();
 
         list_box.bind_model(
