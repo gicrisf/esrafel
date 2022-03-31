@@ -1,7 +1,7 @@
 // use adw::prelude::BinExt;
 
 use gtk::{
-    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, Cast, ObjectExt},
+    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, Cast, ObjectExt, WidgetExt},
     gio,
     };
 
@@ -235,51 +235,26 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
         });
 
         let filter_model = gtk::FilterListModel::new(Some(&model.store), Some(&filter));
-
-        /*
-        let sorter = gtk::CustomSorter::new(move |obj1, obj2| {
-            // Get `IntegerObject` from `glib::Object`
-            let integer_object_1 = obj1
-                .downcast_ref::<IntegerObject>()
-                .expect("The object needs to be of type `IntegerObject`.");
-            let integer_object_2 = obj2
-                .downcast_ref::<IntegerObject>()
-                .expect("The object needs to be of type `IntegerObject`.");
-
-            // Get property "number" from `IntegerObject`
-            let number_1: i32 = integer_object_1.property("number");
-            let number_2: i32 = integer_object_2.property("number");
-
-            // Reverse sorting order -> large numbers come first
-            number_2.cmp(&number_1).into()
-        });
-        let sort_model = gtk::SortListModel::new(Some(&filter_model), Some(&sorter));
-        */
-
         let sort_model = gtk::SingleSelection::new(Some(&filter_model));
-
         let selection_model = gtk::SingleSelection::new(Some(&sort_model));
+
+        // TODO use a list_box instead of list_view
         let list_view = gtk::ListView::new(Some(&selection_model), Some(&factory));
-
-        /*
-        list_view.connect_activate(move |list_view, position| {
-            // Get `IntegerObject` from model
-            let model = list_view.model().expect("The model has to exist.");
-            let nuc_object = model
-                .item(position)
-                .expect("The item has to exist.")
-                .downcast::<NucObject>()
-                .expect("The item has to be an `NucObject`.");
-
-            // Increase "number" of `IntegerObject`
-            // nuc_object.increase_number();
-
-            // Notify that the filter and sorter has been changed
-            filter.changed(gtk::FilterChange::Different);
-        });
-        */
-
         scroller.set_child(Some(&list_view));
+
+        let list_box = gtk::ListBox::new();
+
+        list_box.bind_model(
+            Some(&model.store),
+            |item| {
+                let eqs: i32 = item.property("eqs");
+                let my_test_label = gtk::Label::new(Some(&eqs.to_string()));
+                let result = my_test_label.ancestor(gtk::Widget::static_type());
+                result.unwrap()
+            }
+        );
+
+        scroller.set_child(Some(&list_box));
 
         NucFactoryWidgets { main_box }
     }
