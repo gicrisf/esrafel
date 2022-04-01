@@ -2,7 +2,7 @@
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, Cast, ObjectExt, WidgetExt},
-    gio,
+    gio, glib,
     };
 
 use relm4::{
@@ -16,111 +16,11 @@ use crate::sim::{Radical, Nucleus, Param};
 use crate::nuc_object::NucObject;
 
 // NucPar Component
-// TODO: use the GLib Object
-
 #[derive(Debug)]
 enum NucParMsg {
     Add(String),
     RemoveLast,
 }
-
-#[derive(Debug)]
-struct NucParModel {
-    eqs: usize,
-    spin_val: f64,
-    spin_var: f64,
-    hpf_val: f64,
-    hpf_var: f64,
-}
-
-impl NucParModel {
-    fn new() -> Self {
-        NucParModel {
-            eqs: 1,
-            spin_val: 0.0,
-            spin_var: 50.0,
-            hpf_val: 0.0,
-            hpf_var: 100.0,
-        }
-    }
-
-    fn default_adjustment() -> gtk::Adjustment {
-        gtk::Adjustment::new(
-            0.0,  // value
-            0.0,  // lower
-            100000000.0,  // upper
-            10.0,  // step_increment
-            100.0,  // page_increment
-            1000.0  // page_size
-        )
-    }  // adjustment
-
-    fn to_nuc(&self) -> Nucleus {
-        Nucleus {
-            eqs: Param::set(self.eqs as f64, 0.0),
-            spin: Param::set(self.spin_val, self.spin_var),
-            hpf: Param::set(self.hpf_val, self.hpf_var),
-        }
-    }
-}
-
-impl MicroModel for NucParModel {
-    type Msg = NucParMsg;
-    type Widgets = NucParWidgets;
-    type Data = ();
-
-   fn update(
-        &mut self,
-        msg: NucParMsg,
-        _data: &(),
-        sender: Sender<NucParMsg>,
-    ) {
-        match msg {
-            _add => {}
-            _remove => {}
-        }
-    }  // update
-}
-
-#[relm4::micro_widget]
-#[derive(Debug)]
-impl MicroWidgets<NucParModel> for NucParWidgets {
-    view! {
-        gtk::Box {
-            set_orientation: gtk::Orientation::Horizontal,
-            set_spacing: 5,
-            append = &gtk::Label {
-                set_label: watch!(&model.eqs.to_string()),
-            },
-            append = &gtk::Button {
-                set_label: "Add",
-                // connect_clicked(sender) => move |_| send!(sender, NucParMsg::Add),
-            },
-            append = &gtk::Button {
-                set_label: "Del",
-                // connect_clicked(sender) => move |_| send!(sender, NucParMsg::Remove),
-            },
-            append: eqs_entry = &gtk::Box {
-                set_orientation: gtk::Orientation::Horizontal,
-                set_spacing: 10,
-                append: &gtk::Label::new(Some("Eqs")),
-                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-            },
-            append: spin_entry = &gtk::Box {
-                set_orientation: gtk::Orientation::Horizontal,
-                set_spacing: 10,
-                append: &gtk::Label::new(Some("Spin")),
-                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-            },
-            append: hpf_entry = &gtk::Box {
-                set_orientation: gtk::Orientation::Horizontal,
-                set_spacing: 10,
-                append: &gtk::Label::new(Some("Hpf")),
-                append: &gtk::SpinButton::with_range(0.0, 100.0, 10.0),
-            }
-        }
-    }
-}  // impl for NucParWidgets
 
 // Factory Microcomponent (manual)
 // This is needed ONLY because I have to write widgets manually
@@ -129,7 +29,6 @@ impl MicroWidgets<NucParModel> for NucParWidgets {
 // And not messing with the proper Relm structure of the remaining panel
 
 struct NucFactoryModel {
-    // TODO implement GLib Object subclass, then go back here
     // listbox_model: ListStore<NucParObject>,
     store: gio::ListStore,
 }
@@ -160,12 +59,68 @@ impl MicroModel for NucFactoryModel {
                }
            }
        }
-    }  // update
+   }  // update
+}
+
+impl NucFactoryModel {
+    // Convert every NucObject in a Nucleus struct
+    fn collect_nucs(&self) -> Vec<Nucleus> {
+        let index = self.store.n_items();
+        let mut nucs_vec = Vec::new();
+
+        if index != 0 {
+            for idx in 0..index {
+                // UNDOCUMENTED METHOD!
+                let mynuc = self.store.item(idx);
+                match mynuc {
+                    Some(obj) => {
+                        let nuc = Self::to_nuc(&obj);
+                        nucs_vec.push(nuc);
+                    }
+                    None => {
+                        // TODO manage error
+                        // Just sending something to the main window via sender
+                        // then show the error with a proper widget
+                    }
+                }
+            }
+        }
+
+        nucs_vec
+    }
+
+    fn to_nuc(obj: &glib::Object) -> Nucleus {
+        let eqs_val: f32 = obj.property("eqs");
+        let spin_val: f32 = obj.property("spinval");
+        let spin_var: f32 = obj.property("spinvar");
+        let hpf_val: f32 = obj.property("hpfval");
+        let hpf_var: f32 = obj.property("hpfvar");
+
+        Nucleus {
+            eqs: Param::set(eqs_val as f64, 0.0),
+            spin: Param::set(spin_val as f64, spin_var as f64),
+            hpf: Param::set(hpf_val as f64, hpf_var as f64),
+        }
+    }
 }
 
 #[derive(Debug)]
 struct NucFactoryWidgets {
     main_box: gtk::Box,
+}
+
+impl NucFactoryWidgets {
+    // TODO make a default adj for every type and use it
+    fn default_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            0.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            10.0,  // step_increment
+            100.0,  // page_increment
+            1000.0  // page_size
+        )
+    }  // adjustment
 }
 
 impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
@@ -202,9 +157,51 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
         list_box.bind_model(
             Some(&model.store),
             |item| {
-                let eqs: i32 = item.property("eqs");
-                let my_test_label = gtk::Label::new(Some(&eqs.to_string()));
-                let result = my_test_label.ancestor(gtk::Widget::static_type());
+                let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
+
+                let eqs_label = gtk::Label::new(Some("Eqs"));
+                // TODO better adjustments!
+                let eqs_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+
+                // "value" is the target_property on the target object
+                item.bind_property("eqs", &eqs_spinbtn, "value")
+                    .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
+                    .build();
+
+                let spin_label = gtk::Label::new(Some("Spin"));
+                let spinval_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let spinvar_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+
+                item.bind_property("spinval", &spinval_spinbtn, "value")
+                    .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
+                    .build();
+
+                item.bind_property("spinvar", &spinvar_spinbtn, "value")
+                    .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
+                    .build();
+
+                let hpf_label = gtk::Label::new(Some("Hpf"));
+                let hpfval_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let hpfvar_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+
+                item.bind_property("hpfval", &hpfval_spinbtn, "value")
+                    .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
+                    .build();
+
+                item.bind_property("hpfvar", &hpfvar_spinbtn, "value")
+                    .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
+                    .build();
+
+
+                hbox.append(&eqs_label);
+                hbox.append(&eqs_spinbtn);
+                hbox.append(&spin_label);
+                hbox.append(&spinval_spinbtn);
+                hbox.append(&spinvar_spinbtn);
+                hbox.append(&hpf_label);
+                hbox.append(&hpfval_spinbtn);
+                hbox.append(&hpfvar_spinbtn);
+                let result = hbox.ancestor(gtk::Widget::static_type());
                 result.unwrap()
             }
         );
@@ -241,7 +238,8 @@ struct RadPar {
     dh1_val: f64,
     dh1_var: f64,
     nuc_factory: MicroComponent<NucFactoryModel>,
-    nucs: Vec<MicroComponent<NucParModel>>,
+    // TODO remove nucs
+    nucs: Vec<Nucleus>,
 }
 
 impl RadPar {
@@ -257,6 +255,7 @@ impl RadPar {
             dh1_val: 0.0,
             dh1_var: 0.0,
             nuc_factory: MicroComponent::new(NucFactoryModel::new(), ()),
+            // TODO remove nucs
             nucs: Vec::new(),
         }
     }
@@ -273,19 +272,8 @@ impl RadPar {
     }  // adjustment
 
     fn to_rad(&self) -> Radical {
-
-        let nucs = self.nucs.iter().map(|nuc_component| {
-            match nuc_component.model() {
-                Ok(nuc_model) => {
-                   nuc_model.to_nuc()
-                }
-                _ => {
-                    // TODO raise error about nucleus conversion
-                    Nucleus::set(0.0, 0.0, 0.0)
-                }
-            }
-        }).collect::<Vec<Nucleus>>();
-
+        // TODO manage unwrap
+        let nucs = self.nuc_factory.model().unwrap().collect_nucs();
 
         Radical {
             lwa: Param::set(self.lwa_val, self.lwa_var),
@@ -320,6 +308,7 @@ pub enum RadParMsg {
 
 pub struct RadParModel {
     pars: FactoryVecDeque<RadPar>,
+    // TODO is the counter needed? I don't think so
     nuc_counter: u8,
     received_messages: u8,
 }
@@ -364,6 +353,8 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 let mut new_rads: Vec<Radical> = Vec::new();
                 for rad_par in self.pars.iter() {
                     new_rads.push(rad_par.to_rad());
+                    // TODO before adding to the vector
+                    rad_par.nuc_factory.model().unwrap().collect_nucs();
                 }
 
                 send!(parent_sender, AppMsg::UpdateRads(new_rads));
@@ -456,7 +447,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         // println!("Add Nuc to Radical Model with {} index", index.current_index());
-                        counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
+                        // counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
                         // Update counter
                         self.nuc_counter = self.nuc_counter.wrapping_add(1);
                     }
@@ -466,7 +457,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         // println!("Remove last Nuc from Radical Model with {} index", index.current_index());
-                        counter.nucs.pop();
+                        // counter.nucs.pop();
                         // Update counter
                         self.nuc_counter = self.nuc_counter.wrapping_sub(1);
                     }
@@ -638,7 +629,7 @@ impl FactoryPrototype for RadPar {
     }
 
     fn pre_view() {
-        widgets.nucs_listbox.append(self.nucs.last().unwrap().root_widget());
+        // widgets.nucs_listbox.append(self.nucs.last().unwrap().root_widget());
     }
 
     fn position(&self, _index: &DynamicIndex) {}

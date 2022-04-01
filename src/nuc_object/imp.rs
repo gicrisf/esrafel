@@ -3,7 +3,7 @@ use super::*;
 // Object holding the state
 #[derive(Default)]
 pub struct NucObject {
-    eqs: Cell<i32>,
+    eqs: Cell<f32>,
     spin_val: Cell<f32>,
     spin_var: Cell<f32>,
     hpf_val: Cell<f32>,
@@ -25,7 +25,7 @@ impl ObjectImpl for NucObject {
     fn properties() -> &'static [ParamSpec] {
         static PROPERTIES: Lazy<Vec<ParamSpec>> = Lazy::new(|| {
             vec![
-                glib::ParamSpecInt::new(
+                glib::ParamSpecFloat::new(
                     // Name
                     "eqs",
                     // Nickname
@@ -33,18 +33,18 @@ impl ObjectImpl for NucObject {
                     // Short description
                     "How many equivalents",
                     // Minimum value
-                    i32::MIN,
+                    f32::MIN,
                     // Maximum value
-                    i32::MAX,
+                    f32::MAX,
                     // Default value
-                    1,
+                    1.0,
                     // The property can be read and written to
                     ParamFlags::READWRITE,
                 ),
                 glib::ParamSpecFloat::new(
                     "spinval",
                     "Spin_val",
-                    "Spin value",
+                    "Nuclear Spin value",
                     f32::MIN,
                     f32::MAX,
                     0.5,
@@ -53,7 +53,7 @@ impl ObjectImpl for NucObject {
                 glib::ParamSpecFloat::new(
                     "spinvar",
                     "Spin_var",
-                    "Spin MC variation",
+                    "Nuclear Spin MonteCarlo variation",
                     f32::MIN,
                     f32::MAX,
                     0.0,
@@ -71,7 +71,7 @@ impl ObjectImpl for NucObject {
                 glib::ParamSpecFloat::new(
                     "hpfvar",
                     "Hpf_var",
-                    "Hyperfine constant MC variation",
+                    "Hyperfine constant MonteCarlo variation",
                     f32::MIN,
                     f32::MAX,
                     0.0,
@@ -85,24 +85,24 @@ impl ObjectImpl for NucObject {
     fn set_property(&self, _obj: &Self::Type, _id: usize, value: &Value, pspec: &ParamSpec) {
         match pspec.name() {
             "eqs" => {
-                let input_number = value.get().expect("The value needs to be of type `i32`.");
+                let input_number = value.get().expect("The value needs to be of type `f32`.");
                 self.eqs.replace(input_number);
             },
             "spinval" => {
                 let input_number = value.get().expect("The value needs to be of type `f32`.");
-                self.eqs.replace(input_number);
+                self.spin_val.replace(input_number);
             },
             "spinvar" => {
                 let input_number = value.get().expect("The value needs to be of type `f32`.");
-                self.eqs.replace(input_number);
+                self.spin_var.replace(input_number);
             },
             "hpfval" => {
                 let input_number = value.get().expect("The value needs to be of type `f32`.");
-                self.eqs.replace(input_number);
+                self.hpf_val.replace(input_number);
             },
             "hpfvar" => {
                 let input_number = value.get().expect("The value needs to be of type `f32`.");
-                self.eqs.replace(input_number);
+                self.hpf_var.replace(input_number);
             },
             _ => unimplemented!(),
         }
