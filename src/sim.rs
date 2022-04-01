@@ -67,12 +67,12 @@ impl Radical {
     }
 
     // Radical without nuclei and standard parameters;
-    pub fn electron() -> Radical {
+    pub fn _electron() -> Radical {
         Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new())
     }
 
     // Nitroxide-like test radical
-    pub fn probe() -> Radical {
+    pub fn _probe() -> Radical {
         let mut rad = Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new());
         rad.nucs.push(Nucleus::set(1.0, 14.0, 1.0));
         rad
@@ -89,20 +89,7 @@ impl Radical {
 }
 
 // Calculate teorical spectra
-// pub fn calcola(rads: Vec<Radical>, sweep: f64, points: f64, sigma: f64) -> Vec<f64> {
-pub fn calcola(rads: &Vec<Radical>) -> Vec<f64> {
-    let sweep: f64 = 100.0;
-    let points: f64 = 1024.0;
-    let sigma: f64 = 1E+20;
-    // let iters: usize = 0;
-    //
-    // TODO erase those testing functions
-    // let mut rads = Vec::new();
-    // rads.push(Radical::probe());
-    //
-    // let sweep get from model
-    // let sweep = self.sweep.lock().unwrap();
-
+pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
     let incrgauss = sweep/(points -1.0);
     let mut lno = vec![0.0; points as usize];
     let mut newteor = vec![0.0; points as usize];
@@ -249,25 +236,11 @@ fn check_pars(mut rad: Radical) -> Radical {
 }
 
 // Strict porting of classic Montecarlo method 1999
-pub fn mc_fit(rads: Vec<Radical>, exp: &Vec<f64>, points: f64) -> (f64, Vec<Radical>) {
-    // let iters;
-    // let sigma
-
-    // Basta prendere quello gia' calcolato, no?
-    // Questo calcolo mi pare superfluo
-    //
-    // Posso fare a meno di clonare qui?
-    // Magari passare solo il pointer
-    let mut newteor = calcola(&rads);
+pub fn mc_fit(rads: Vec<Radical>, exp: &Vec<f64>, points: f64, mut newteor: Vec<f64>) -> (f64, Vec<Radical>) {
 
     let (mut somma, mut somma1, mut somma2): (f64, f64, f64) = (0.0, 0.0, 0.0);
     let start: usize = 1;
     let fine: usize = points as usize;  // TODO check this one
-
-    // TODO externalize iteration count
-    // self.iters+=1;
-
-    // Randomize Par
 
     // Start MC
     for j in start..fine {

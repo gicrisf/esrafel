@@ -249,7 +249,10 @@ impl AppUpdate for AppModel {
                 // Must search for another tracking method, but it's not a priority rn
                 if self.montecarlo {
                     if let Some(emp) = &self.empirical {
-                    let (newsigma, newrads) = sim::mc_fit(self.rads.clone(), &emp, self.points as f64);
+                        let (newsigma, newrads) = sim::mc_fit(
+                            self.rads.clone(), &emp, self.points as f64,
+                            sim::calcola(&self.rads, self.sweep, self.points as f64)
+                        );
 
                     // TODO: CONDITIONAL REASSIGNMENT of sigma here!
                     // println!("{:?}", newsigma);
@@ -257,7 +260,7 @@ impl AppUpdate for AppModel {
                     self.rads = newrads;
                     self.iters+=1;
                     // TODO store sim::calcola just once
-                    components.chart.send(ChartMsg::AddTheoretical(sim::calcola(&self.rads)))
+                    components.chart.send(ChartMsg::AddTheoretical(sim::calcola(&self.rads, self.sweep, self.points as f64)))
                                     .expect("Failed sending new theoretical spectrum to the Chart");
                 } // if empirical exists
                 } // if montecarlo toggled
