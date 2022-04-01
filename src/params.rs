@@ -288,8 +288,13 @@ impl RadPar {
     }  // adjustment
 
     fn to_rad(&self) -> Radical {
-        // TODO manage unwrap
-        let nucs = self.nuc_factory.model().unwrap().collect_nucs();
+        let nucs = match self.nuc_factory.model() {
+            Ok(model) => { model.collect_nucs() }
+            Err(_) => {
+                // TODO Send error
+                    Vec::new()
+                }
+            };
 
         Radical {
             lwa: Param::set(self.lwa_val, self.lwa_var),
@@ -325,11 +330,6 @@ pub struct RadParModel {
     received_messages: u8,
 }
 
-// #[derive(relm4::Components)]
-// pub struct RadParComponents {
-//    nuc_factory: RelmComponent<NucParModel, RadParModel>,
-// }
-
 impl Model for RadParModel {
     type Msg = RadParMsg;
     type Widgets = RadParWidgets;
@@ -364,8 +364,6 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 let mut new_rads: Vec<Radical> = Vec::new();
                 for rad_par in self.pars.iter() {
                     new_rads.push(rad_par.to_rad());
-                    // TODO before adding to the vector
-                    rad_par.nuc_factory.model().unwrap().collect_nucs();
                 }
 
                 send!(parent_sender, AppMsg::UpdateRads(new_rads));
@@ -593,9 +591,6 @@ impl FactoryPrototype for RadPar {
                     append: nucs_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_spacing: 10,
-                        // TODO del this one...
-                        append: nucs_listbox = &gtk::ListBox {},
-                        // for this one... Maintaining both until I'm not 100% sure about this change
                         append: self.nuc_factory.root_widget(),
                     }
                 }
