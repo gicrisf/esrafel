@@ -110,15 +110,36 @@ struct NucFactoryWidgets {
 }
 
 impl NucFactoryWidgets {
-    // TODO make a default adj for every type and use it
-    fn default_adjustment() -> gtk::Adjustment {
+    fn eqs_adjustment() -> gtk::Adjustment {
         gtk::Adjustment::new(
-            0.0,  // value
+            1.0,  // value
             0.0,  // lower
             100000000.0,  // upper
-            10.0,  // step_increment
-            100.0,  // page_increment
-            1000.0  // page_size
+            1.0,  // step_increment
+            10.0,  // page_increment
+            100.0  // page_size
+        )
+    }  // adjustment
+
+    fn spin_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            0.5,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            0.5,  // step_increment
+            1.0,  // page_increment
+            10.0  // page_size
+        )
+    }  // adjustment
+
+    fn hpf_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            1.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            0.1,  // step_increment
+            1.0,  // page_increment
+            10.0  // page_size
         )
     }  // adjustment
 }
@@ -160,8 +181,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                 let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 5);
 
                 let eqs_label = gtk::Label::new(Some("Eqs"));
-                // TODO better adjustments!
-                let eqs_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let eqs_spinbtn = gtk::SpinButton::new(Some(&Self::eqs_adjustment()), 0.5, 0);
 
                 // "value" is the target_property on the target object
                 item.bind_property("eqs", &eqs_spinbtn, "value")
@@ -169,7 +189,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                     .build();
 
                 let spin_label = gtk::Label::new(Some("Spin"));
-                let spinval_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let spinval_spinbtn = gtk::SpinButton::new(Some(&Self::spin_adjustment()), 0.5, 1);
                 let spinvar_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
 
                 item.bind_property("spinval", &spinval_spinbtn, "value")
@@ -181,7 +201,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                     .build();
 
                 let hpf_label = gtk::Label::new(Some("Hpf"));
-                let hpfval_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let hpfval_spinbtn = gtk::SpinButton::new(Some(&Self::hpf_adjustment()), 0.1, 1);
                 let hpfvar_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
 
                 item.bind_property("hpfval", &hpfval_spinbtn, "value")
