@@ -238,8 +238,6 @@ struct RadPar {
     dh1_val: f64,
     dh1_var: f64,
     nuc_factory: MicroComponent<NucFactoryModel>,
-    // TODO remove nucs
-    nucs: Vec<Nucleus>,
 }
 
 impl RadPar {
@@ -255,8 +253,6 @@ impl RadPar {
             dh1_val: 0.0,
             dh1_var: 0.0,
             nuc_factory: MicroComponent::new(NucFactoryModel::new(), ()),
-            // TODO remove nucs
-            nucs: Vec::new(),
         }
     }
 
@@ -302,14 +298,10 @@ pub enum RadParMsg {
     SetAmountVar(WeakDynamicIndex, f64),
     SetDh1Val(WeakDynamicIndex, f64),
     SetDh1Var(WeakDynamicIndex, f64),
-    AddNuc(WeakDynamicIndex),
-    RemoveNuc(WeakDynamicIndex),
 }
 
 pub struct RadParModel {
     pars: FactoryVecDeque<RadPar>,
-    // TODO is the counter needed? I don't think so
-    nuc_counter: u8,
     received_messages: u8,
 }
 
@@ -328,7 +320,6 @@ impl ComponentUpdate<AppModel> for RadParModel {
     fn init_model(_parent_model: &AppModel) -> Self {
         RadParModel {
             pars: FactoryVecDeque::new(),
-            nuc_counter: 0,
             received_messages: 0,
         }
     }
@@ -440,26 +431,6 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.dh1_var = val;
-                    }
-                }
-            }
-            RadParMsg::AddNuc(weak_index) => {
-                if let Some(index) = weak_index.upgrade() {
-                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
-                        // println!("Add Nuc to Radical Model with {} index", index.current_index());
-                        // counter.nucs.push(MicroComponent::new(NucParModel::new(), ()));
-                        // Update counter
-                        self.nuc_counter = self.nuc_counter.wrapping_add(1);
-                    }
-                }
-            }
-            RadParMsg::RemoveNuc(weak_index) => {
-                if let Some(index) = weak_index.upgrade() {
-                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
-                        // println!("Remove last Nuc from Radical Model with {} index", index.current_index());
-                        // counter.nucs.pop();
-                        // Update counter
-                        self.nuc_counter = self.nuc_counter.wrapping_sub(1);
                     }
                 }
             }
@@ -599,21 +570,6 @@ impl FactoryPrototype for RadPar {
                 append: nuc_factory_box = &gtk::Box {
                     set_orientation: gtk::Orientation::Horizontal,
                     set_spacing: 10,
-                    append = &gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
-                        set_spacing: 10,
-                        append = &gtk::Button {
-                            set_label: "Add Nuc",
-                            connect_clicked(sender, key) => move |val| {
-                                send!(sender, RadParMsg::AddNuc(key.downgrade()));
-                            }
-                        },
-                        append = &gtk::Button::with_label("Remove Nuc") {
-                            connect_clicked(sender, key) => move |val| {
-                                send!(sender, RadParMsg::RemoveNuc(key.downgrade()));
-                            }
-                        },
-                    },
                     append: nucs_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
                         set_spacing: 10,
