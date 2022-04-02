@@ -124,7 +124,7 @@ impl NucFactoryWidgets {
     fn spin_adjustment() -> gtk::Adjustment {
         gtk::Adjustment::new(
             0.5,  // value
-            0.0,  // lower
+            -100.0,  // lower
             100000000.0,  // upper
             0.5,  // step_increment
             1.0,  // page_increment
@@ -142,6 +142,17 @@ impl NucFactoryWidgets {
             10.0  // page_size
         )
     }  // adjustment
+
+    fn var_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            1.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            0.1,  // step_increment
+            1.0,  // page_increment
+            10.0  // page_size
+        )
+    }
 }
 
 impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
@@ -190,7 +201,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
 
                 let spin_label = gtk::Label::new(Some("Spin"));
                 let spinval_spinbtn = gtk::SpinButton::new(Some(&Self::spin_adjustment()), 0.5, 1);
-                let spinvar_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let spinvar_spinbtn = gtk::SpinButton::new(Some(&Self::var_adjustment()), 0.1, 1);
 
                 item.bind_property("spinval", &spinval_spinbtn, "value")
                     .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
@@ -202,7 +213,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
 
                 let hpf_label = gtk::Label::new(Some("Hpf"));
                 let hpfval_spinbtn = gtk::SpinButton::new(Some(&Self::hpf_adjustment()), 0.1, 1);
-                let hpfvar_spinbtn = gtk::SpinButton::with_range(0.0, 10.0, 1.0);
+                let hpfvar_spinbtn = gtk::SpinButton::new(Some(&Self::var_adjustment()), 0.1, 1);
 
                 item.bind_property("hpfval", &hpfval_spinbtn, "value")
                     .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
@@ -232,7 +243,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
     }
 
     fn view(&mut self, _model: &NucFactoryModel, _sender: Sender<NucParMsg>) {
-        // Do things
+        // Do things, maybe?
     }
 
     fn root_widget(&self) -> Self::Root {
