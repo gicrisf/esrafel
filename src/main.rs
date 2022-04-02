@@ -207,7 +207,8 @@ impl OpenButtonParent for AppModel {
 struct AppModel {
     empirical: Option<Vec<f64>>,
     rads: Vec<Radical>,
-    points: usize,  // TODO: use usize
+    newrads: Vec<Radical>,
+    points: usize,
     sweep: f64,
     sigma: f64,
     iters: usize,
@@ -216,6 +217,7 @@ struct AppModel {
 
 enum AppMsg {
     IterMontecarlo,
+    Redraw,
     ToggleMontecarlo(bool),
     Open(PathBuf),
     UpdateRads(Vec<Radical>),
@@ -247,23 +249,36 @@ impl AppUpdate for AppModel {
             AppMsg::IterMontecarlo => {
                 // This is a fast and working solution, but a persistent iteration is not an elegant move
                 // Must search for another tracking method, but it's not a priority rn
+                // TODO Wrap in a mc_fit function
                 if self.montecarlo {
                     if let Some(emp) = &self.empirical {
-                        let (newsigma, newrads) = sim::mc_fit(
-                            self.rads.clone(), &emp, self.points as f64,
-                            sim::calcola(&self.rads, self.sweep, self.points as f64)
+                        let (newsigma, newteor) = sim::errore(
+                            &emp, self.points as f64,
+                            sim::calcola(&self.newrads, self.sweep, self.points as f64)
                         );
 
-                    // TODO: CONDITIONAL REASSIGNMENT of sigma here!
-                    // println!("{:?}", newsigma);
-                    self.sigma = newsigma;
-                    self.rads = newrads;
-                    self.iters+=1;
-                    // TODO store sim::calcola just once
-                    components.chart.send(ChartMsg::AddTheoretical(sim::calcola(&self.rads, self.sweep, self.points as f64)))
-                                    .expect("Failed sending new theoretical spectrum to the Chart");
-                } // if empirical exists
+                        components.chart.send(ChartMsg::AddTheoretical(newteor))
+                                        .expect("Failed sending new theoretical spectrum to the Chart");
+
+                        if newsigma < self.sigma {
+                            self.sigma = newsigma;
+                            println!("Newsigma! {:?}", newsigma);
+                            self.rads = self.newrads.clone();
+                            println!("updating rads with {:?}", self.rads);
+                        }
+
+                        self.newrads = sim::caso(&self.rads);
+
+                        self.iters+=1;
+                    } // if empirical exists
                 } // if montecarlo toggled
+            }
+            AppMsg::Redraw => {
+                if self.montecarlo {
+                    components.chart.send(ChartMsg::AddTheoretical(
+                        sim::calcola(&self.rads, self.sweep, self.points as f64)))
+                                    .expect("Failed sending new theoretical spectrum to the Chart");
+                }
             }
             AppMsg::ToggleMontecarlo(v) => {
                 self.montecarlo = v;
@@ -473,9 +488,10 @@ impl Widgets<AppModel, ()> for AppWidgets {
         // IDEA How to send from thread and through components
         // let chart_sender = components.chart.sender();
         std::thread::spawn(move || loop {
-            std::thread::sleep(std::time::Duration::from_millis(20));
+            std::thread::sleep(std::time::Duration::from_millis(40));
             send!(sender, AppMsg::IterMontecarlo);
-            // send!(chart_sender, ChartMsg::Update);
+            std::thread::sleep(std::time::Duration::from_millis(40));
+            send!(sender, AppMsg::Redraw);
         });
     }
 }
@@ -491,10 +507,11 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
+        newrads: vec![Radical::var_probe()],
         rads: vec![Radical::var_probe()],
         points: 1024,
         sweep: 100.0,
-        sigma: 1E+20,
+        sigma: 100000000000000000000.0,  //1e+20
         iters: 0,
         montecarlo: false,
     };

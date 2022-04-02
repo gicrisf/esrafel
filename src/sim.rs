@@ -80,10 +80,12 @@ impl Radical {
 
     pub fn var_probe() -> Radical {
         let mut rad = Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new());
-        rad.nucs.push(Nucleus::set(1.0, 14.0, 1.0));
-        rad.lwa.var = 1.0;
-        rad.lrtz.var = 1.0;
-        rad.amount.var = 10.0;
+        rad.nucs.push(Nucleus::set(1.0, 19.0, 1.0));
+        rad.nucs[0].hpf.var = 1.0;
+        rad.lwa.var = 0.1;
+        rad.dh1.var = 0.1;
+        rad.lrtz.var = 0.1;
+        rad.amount.var = 0.1;
         rad
     } // var probe
 }
@@ -226,6 +228,40 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
 
 // MONTECARLO
 
+// **Strict** porting of classic Montecarlo functions of ESR Commander 1999
+pub fn errore(
+    exp: &Vec<f64>,
+    points: f64,
+    mut newteor: Vec<f64>) -> (f64, Vec<f64>) {
+
+    let (mut somma, mut somma1, mut somma2): (f64, f64, f64) = (0.0, 0.0, 0.0);
+    let start: usize = 1;
+    let fine = points as usize;  // TODO check this one
+
+    // Start MC
+    for j in start..fine {
+        somma1 += newteor[j].powi(2);
+        somma2 += exp[j].abs() * newteor[j].abs();
+    }
+
+    let norma: f64;
+    if somma1 != 0.0 {
+        norma = somma2/somma1
+    } else {
+        norma = 0.0
+    };
+
+    for j in start..fine {
+        newteor[j] = newteor[j]*norma;
+        let diff = (exp[j] - newteor[j]).powi(2);
+        somma+=diff;
+    }
+
+    let newsigma =(somma/(fine-start) as f64).sqrt();
+
+    (newsigma, newteor)
+}  // mc
+
 // Reset potentially aberrant value returned by MC function;
 fn check_pars(mut rad: Radical) -> Radical {
     if rad.lwa.val < 0.0 { rad.lwa.val = 0.0 };
@@ -235,30 +271,8 @@ fn check_pars(mut rad: Radical) -> Radical {
     rad
 }
 
-// Strict porting of classic Montecarlo method 1999
-pub fn mc_fit(rads: Vec<Radical>, exp: &Vec<f64>, points: f64, mut newteor: Vec<f64>) -> (f64, Vec<Radical>) {
-
-    let (mut somma, mut somma1, mut somma2): (f64, f64, f64) = (0.0, 0.0, 0.0);
-    let start: usize = 1;
-    let fine: usize = points as usize;  // TODO check this one
-
-    // Start MC
-    for j in start..fine {
-        somma1 += newteor[j].powi(2);
-        somma2 += exp[j].abs() * newteor[j].abs();
-    }
-
-    let norma: f64;
-    if somma1 == 0.0 { norma = 0.0 } else { norma = somma2/somma1 };
-
-    for j in start..fine {
-        newteor[j] *= norma;
-        let diff = (exp[j] - newteor[j]).powi(2);
-        somma+=diff;
-    }
-
+pub fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
     let mut mc_rads = Vec::new();
-    let newsigma =(somma/(fine-start) as f64).sqrt();
 
     for mut rad in (&rads).to_vec() {
         rad.lwa = rad.lwa.randomize();
@@ -270,15 +284,9 @@ pub fn mc_fit(rads: Vec<Radical>, exp: &Vec<f64>, points: f64, mut newteor: Vec<
             nuc.hpf = nuc.hpf.randomize();
         }
 
-        // check this out
+        // TODO check this out
         rad = check_pars(rad);
         mc_rads.push(rad);
     }  // for rad in rads
-
-    // sigma = newsigma;
-
-    // Push in model.theoretical
-    // calcola(&rads);
-
-    (newsigma, mc_rads)
-}  // mc
+    mc_rads
+}
