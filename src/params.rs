@@ -522,7 +522,7 @@ impl FactoryPrototype for RadPar {
     view! {
         gtk::Box {
             set_orientation: gtk::Orientation::Vertical,
-            set_spacing: 15,
+            set_spacing: 5,
             append: label_box = &gtk::Box {
                 set_orientation: gtk::Orientation::Vertical,
                 set_spacing: 5,
@@ -530,7 +530,7 @@ impl FactoryPrototype for RadPar {
             },
             append: entries_box = &gtk::Box {
                 set_orientation: gtk::Orientation::Horizontal,
-                set_spacing: 15,
+                set_spacing: 5,
                 append: par_general_box = &gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 5,
@@ -561,13 +561,13 @@ impl FactoryPrototype for RadPar {
                 },
                 append: rad_params_box = &gtk::Box {
                     set_orientation: gtk::Orientation::Vertical,
-                    set_spacing: 10,
+                    set_spacing: 5,
                     set_homogeneous: true,
 
                     // LWA Box
                     append: lwa_entry_old = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
-                        set_spacing: 10,
+                        set_spacing: 5,
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("LWA")),
                         append: lwa_entry_val = &gtk::SpinButton {
@@ -588,7 +588,7 @@ impl FactoryPrototype for RadPar {
                     // LRTZ Box
                     append: lrtz_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
-                        set_spacing: 10,
+                        set_spacing: 5,
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("Lrtz")),
                         append: lrtz_entry_val = &gtk::SpinButton {
@@ -609,7 +609,7 @@ impl FactoryPrototype for RadPar {
                     // Amount Box
                     append: amount_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
-                        set_spacing: 10,
+                        set_spacing: 5,
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("Amount")),
                         append: amount_entry_val = &gtk::SpinButton {
@@ -629,7 +629,7 @@ impl FactoryPrototype for RadPar {
                     },
                     append: dh1_entry = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
-                        set_spacing: 10,
+                        set_spacing: 5,
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("dh1")),
                         append: dh1_entry_val = &gtk::SpinButton {
@@ -650,10 +650,10 @@ impl FactoryPrototype for RadPar {
                 },
                 append: nuc_factory_box = &gtk::Box {
                     set_orientation: gtk::Orientation::Horizontal,
-                    set_spacing: 10,
+                    set_spacing: 5,
                     append: nucs_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
-                        set_spacing: 10,
+                        set_spacing: 5,
                         append: self.nuc_factory.root_widget(),
                     }
                 }
