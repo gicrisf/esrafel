@@ -287,10 +287,54 @@ impl RadPar {
         }
     }
 
-    fn default_adjustment() -> gtk::Adjustment {
+    fn var_adjustment() -> gtk::Adjustment {
         gtk::Adjustment::new(
             0.0,  // value
             0.0,  // lower
+            100000000.0,  // upper
+            1.0,  // step_increment
+            10.0,  // page_increment
+            100.0  // page_size
+        )
+    }  // adjustment
+
+    fn lwa_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            1.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            1.0,  // step_increment
+            10.0,  // page_increment
+            100.0  // page_size
+        )
+    }  // adjustment
+
+    fn amount_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            100.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            10.0,  // step_increment
+            100.0,  // page_increment
+            1000.0  // page_size
+        )
+    }  // adjustment
+
+    fn lrtz_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            50.0,  // value
+            0.0,  // lower
+            100000000.0,  // upper
+            10.0,  // step_increment
+            100.0,  // page_increment
+            1000.0  // page_size
+        )
+    }  // adjustment
+
+    fn dh1_adjustment() -> gtk::Adjustment {
+        gtk::Adjustment::new(
+            0.0,  // value
+            -1000.0,  // lower
             100000000.0,  // upper
             10.0,  // step_increment
             100.0,  // page_increment
@@ -527,13 +571,15 @@ impl FactoryPrototype for RadPar {
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("LWA")),
                         append: lwa_entry_val = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::lwa_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLwaVal(key.downgrade(), val.value()));
                             }
                         },
                         append: lwa_entry_var = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::var_adjustment(),
+                            set_digits: 1,
+                            set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLwaVar(key.downgrade(), val.value()));
                             }
@@ -546,13 +592,15 @@ impl FactoryPrototype for RadPar {
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("Lrtz")),
                         append: lrtz_entry_val = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::lrtz_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLrtzVal(key.downgrade(), val.value()));
                             }
                         },
                         append: lrtz_entry_var = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::var_adjustment(),
+                            set_digits: 1,
+                            set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLrtzVar(key.downgrade(), val.value()));
                             }
@@ -565,13 +613,15 @@ impl FactoryPrototype for RadPar {
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("Amount")),
                         append: amount_entry_val = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::amount_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetAmountVal(key.downgrade(), val.value()));
                             }
                         },
                         append: amount_entry_var = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::var_adjustment(),
+                            set_digits: 1,
+                            set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetAmountVar(key.downgrade(), val.value()));
                             }
@@ -583,13 +633,15 @@ impl FactoryPrototype for RadPar {
                         set_homogeneous: true,
                         prepend: &gtk::Label::new(Some("dh1")),
                         append: dh1_entry_val = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::dh1_adjustment(),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetDh1Val(key.downgrade(), val.value()));
                             }
                         },
                         append: dh1_entry_var = &gtk::SpinButton {
-                            set_adjustment: &RadPar::default_adjustment(),
+                            set_adjustment: &RadPar::var_adjustment(),
+                            set_digits: 1,
+                            set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetDh1Var(key.downgrade(), val.value()));
                             }
