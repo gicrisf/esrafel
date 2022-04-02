@@ -229,7 +229,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
 // MONTECARLO
 
 // **Strict** porting of classic Montecarlo functions of ESR Commander 1999
-pub fn errore(
+fn errore(
     exp: &Vec<f64>,
     points: f64,
     mut newteor: Vec<f64>) -> (f64, Vec<f64>) {
@@ -271,7 +271,7 @@ fn check_pars(mut rad: Radical) -> Radical {
     rad
 }
 
-pub fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
+fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
     let mut mc_rads = Vec::new();
 
     for mut rad in (&rads).to_vec() {
@@ -289,4 +289,30 @@ pub fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
         mc_rads.push(rad);
     }  // for rad in rads
     mc_rads
+}
+
+// Wrap MC logic in a single function
+pub fn mc_fit(
+    empirical: &Vec<f64>,
+    points: f64,
+    sweep: f64,
+    mut sigma: f64,
+    mut rads: Vec<Radical>) -> (f64, Vec<f64>, Vec<Radical>) {
+
+    // Randomize parameters for next iteration
+    let newrads = caso(&rads);
+
+    // Reallocate params if variance is less than previous iteration
+    let (newsigma, newteor) = errore(
+        &empirical, points,
+        calcola(&newrads, sweep, points)
+    );
+
+    if newsigma < sigma {
+        sigma = newsigma;
+        rads = newrads;
+    }
+
+    // Return newteor nevertheless: you plot it anywhere
+    (sigma, newteor, rads)
 }

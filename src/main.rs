@@ -109,7 +109,7 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
     view! {
         gtk::Box {
             set_orientation: gtk::Orientation::Vertical,
-            set_spacing: 10,
+            set_spacing: 5,
             set_hexpand: true,
             append: area = &gtk::DrawingArea {
                 set_vexpand: true,
@@ -207,7 +207,6 @@ impl OpenButtonParent for AppModel {
 struct AppModel {
     empirical: Option<Vec<f64>>,
     rads: Vec<Radical>,
-    newrads: Vec<Radical>,
     points: usize,
     sweep: f64,
     sigma: f64,
@@ -249,25 +248,26 @@ impl AppUpdate for AppModel {
             AppMsg::IterMontecarlo => {
                 // This is a fast and working solution, but a persistent iteration is not an elegant move
                 // Must search for another tracking method, but it's not a priority rn
-                // TODO Wrap in a mc_fit function
                 if self.montecarlo {
                     if let Some(emp) = &self.empirical {
-                        let (newsigma, newteor) = sim::errore(
-                            &emp, self.points as f64,
-                            sim::calcola(&self.newrads, self.sweep, self.points as f64)
-                        );
+
+                        let (newsigma, newteor, newrads) =
+                            sim::mc_fit(
+                                &emp,
+                                self.points as f64,
+                                self.sweep,
+                                self.sigma,
+                                self.rads.clone(),
+                            );
+
+                        self.sigma = newsigma;
+                        self.rads = newrads;
 
                         components.chart.send(ChartMsg::AddTheoretical(newteor))
                                         .expect("Failed sending new theoretical spectrum to the Chart");
 
-                        if newsigma < self.sigma {
-                            self.sigma = newsigma;
-                            println!("Newsigma! {:?}", newsigma);
-                            self.rads = self.newrads.clone();
-                            println!("updating rads with {:?}", self.rads);
-                        }
-
-                        self.newrads = sim::caso(&self.rads);
+                        // Randomize parameters for next iteration
+                        // self.newrads = sim::caso(&self.rads);
 
                         self.iters+=1;
                     } // if empirical exists
@@ -377,18 +377,18 @@ impl Widgets<AppModel, ()> for AppWidgets {
                     add_titled(Some("Params"), "Parameters") = &gtk::Box {
                         set_orientation: Orientation::Vertical,
                         set_hexpand: false,
-                        set_spacing: 15,
+                        set_spacing: 5,
                         append = general_pars_box = &gtk::Box {
                             set_orientation: Orientation::Horizontal,
                             set_hexpand: true,
-                            set_spacing: 15,
+                            set_spacing: 5,
                             set_halign: gtk::Align::Fill,
                             append = &gtk::Label {
                                 set_label: "General parameters: ",
                             },
                             append: sweep_entry = &gtk::Box {
                                 set_orientation: gtk::Orientation::Horizontal,
-                                set_spacing: 10,
+                                set_spacing: 5,
                                 set_homogeneous: true,
                                 append: &gtk::Label::new(Some("Sweep")),
                                 append: sweep_spin = &gtk::SpinButton {
@@ -407,7 +407,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                             },
                             append: points_entry = &gtk::Box {
                                 set_orientation: gtk::Orientation::Horizontal,
-                                set_spacing: 10,
+                                set_spacing: 5,
                                 set_homogeneous: true,
                                 append: &gtk::Label::new(Some("Points")),
                                 append: points_spin = &gtk::SpinButton {
@@ -507,7 +507,6 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
-        newrads: vec![Radical::var_probe()],
         rads: vec![Radical::var_probe()],
         points: 1024,
         sweep: 100.0,
