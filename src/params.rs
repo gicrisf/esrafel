@@ -369,7 +369,54 @@ impl RadPar {
         self.amount_var = rad.amount.var;
         self.dh1_val = rad.dh1.val;
         self.dh1_var = rad.dh1.var;
-        // TODO from nucs
+
+        // Set nuc values for every single nuc in the model
+        match self.nuc_factory.model() {
+            Ok(nuc_model) => {
+                let howmany_rad_nucs = rad.nucs.len() as usize;
+                let howmany_factory_nucs = nuc_model.store.n_items() as usize;
+
+                // Realign factory objects and source
+                if howmany_factory_nucs < howmany_rad_nucs {
+                    // Add missing nucs to the factory
+                    for _i in howmany_factory_nucs..howmany_rad_nucs {
+                        nuc_model.store.append(&NucObject::new());
+                    }
+                } else if howmany_rad_nucs < howmany_factory_nucs {
+                    // Remove extra nucs from the factory
+                    for _i in howmany_rad_nucs..howmany_factory_nucs {
+                        // Del last nuc object
+                        nuc_model.store.remove(nuc_model.store.n_items() - 1);
+                    }
+                }
+
+                // Double checking
+                if rad.nucs.len() as usize == nuc_model.store.n_items() as usize {
+                    // Set nucs
+                    for (index, nuc) in rad.nucs.iter().enumerate() {
+                        match nuc_model.store.item(index as u32) {
+                            Some(obj) => {
+                                // Move this to a method
+                                obj.set_property("eqs", nuc.eqs.val as f32);
+                                obj.set_property("spinval", nuc.spin.val as f32);
+                                obj.set_property("spinvar", nuc.spin.var as f32);
+                                obj.set_property("hpfval", nuc.hpf.val as f32);
+                                obj.set_property("hpfvar", nuc.hpf.var as f32);
+                            }
+                            None => {
+                                // No objects
+                                // Could happen, we don't need any error here;
+                            }
+                        }
+                    }
+                } else {
+                    // TODO raise error
+                }
+            }
+            Err(e) => {
+                println!("Nuc model not found; err: {:?}", e);
+            }
+        }
     } // from rad
 }
 
