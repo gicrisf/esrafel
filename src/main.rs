@@ -36,7 +36,7 @@ mod nuc_object;
 
 use sim::Radical;
 use drawers::{Line, Color};
-use params::RadParModel;
+use params::{RadParModel, RadParMsg};
 
 // -- Chart model
 
@@ -222,6 +222,7 @@ enum AppMsg {
     UpdateRads(Vec<Radical>),
     SetSweep(f64),
     SetPoints(usize),  // then, temporarily convert to f64
+    UpdatePars,
 }
 
 #[derive(relm4::Components)]
@@ -244,6 +245,9 @@ impl AppUpdate for AppModel {
                 self.rads = new_rads;
                 // DEBUGGING ONLY
                 println!("{:?}", self.rads);
+            }
+            AppMsg::UpdatePars => {
+                components.params.send(RadParMsg::Import(self.rads.clone())).expect("Refreshing param panel failed");
             }
             AppMsg::IterMontecarlo => {
                 // This is a fast and working solution, but a persistent iteration is not an elegant move
@@ -280,8 +284,14 @@ impl AppUpdate for AppModel {
                                     .expect("Failed sending new theoretical spectrum to the Chart");
                 }
             }
-            AppMsg::ToggleMontecarlo(v) => {
-                self.montecarlo = v;
+            AppMsg::ToggleMontecarlo(is_going) => {
+                // Sync new pars with the GUI
+                if !is_going {
+                    // Awful duplication of this from AppMsg::UpdatePars
+                    components.params.send(RadParMsg::Import(self.rads.clone())).expect("Refreshing param panel failed");
+                }
+
+                self.montecarlo = is_going;
             }  // ./Montecarlo
             AppMsg::Open(path) => {
                 let mut data = String::new();
@@ -484,6 +494,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .bind_property("title-visible", &bottom_bar, "reveal")
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
+
+        // Update Rad panel
+        send!(sender, AppMsg::UpdatePars);
 
         // IDEA How to send from thread and through components
         // let chart_sender = components.chart.sender();

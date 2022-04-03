@@ -359,6 +359,18 @@ impl RadPar {
             nucs,
         }
     }
+
+    fn from_rad(&mut self, rad: &Radical) {
+        self.lwa_val = rad.lwa.val;
+        self.lwa_var = rad.lwa.var;
+        self.lrtz_val = rad.lrtz.val;
+        self.lrtz_var = rad.lrtz.var;
+        self.amount_val = rad.amount.val;
+        self.amount_var = rad.amount.var;
+        self.dh1_val = rad.dh1.val;
+        self.dh1_var = rad.dh1.var;
+        // TODO from nucs
+    } // from rad
 }
 
 #[derive(Debug)]
@@ -366,6 +378,7 @@ pub enum RadParMsg {
     AddFirst,
     RemoveLast,
     Update,
+    Import(Vec<Radical>),  // TODO Sync?
     CountAt(WeakDynamicIndex),
     RemoveAt(WeakDynamicIndex),
     InsertBefore(WeakDynamicIndex),
@@ -422,6 +435,22 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 }
 
                 send!(parent_sender, AppMsg::UpdateRads(new_rads));
+            }
+            // TODO abstract the logic in an external function
+            RadParMsg::Import(rads) => {
+                // Add the right amount of radical from a source
+                let target_len = rads.len();
+                if self.pars.len() != target_len {
+                    for i in 0..target_len {
+                        let mut new_par = RadPar::new(i as u8);
+                        new_par.from_rad(&rads[i]);
+                        self.pars.push_front(new_par);
+                    }
+                } else {
+                    for i in 0..target_len {
+                        self.pars.get_mut(i).expect("Failed getting par").from_rad(&rads[i]);
+                    }
+                }
             }
             RadParMsg::CountAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
@@ -572,6 +601,8 @@ impl FactoryPrototype for RadPar {
                         prepend: &gtk::Label::new(Some("LWA")),
                         append: lwa_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::lwa_adjustment(),
+                            set_digits: 1,
+                            set_value: watch!(self.lwa_val),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLwaVal(key.downgrade(), val.value()));
                             }
@@ -580,6 +611,7 @@ impl FactoryPrototype for RadPar {
                             set_adjustment: &RadPar::var_adjustment(),
                             set_digits: 1,
                             set_climb_rate: 0.5,
+                            set_value: watch!(self.lwa_var),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLwaVar(key.downgrade(), val.value()));
                             }
@@ -593,6 +625,8 @@ impl FactoryPrototype for RadPar {
                         prepend: &gtk::Label::new(Some("Lrtz")),
                         append: lrtz_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::lrtz_adjustment(),
+                            set_digits: 1,
+                            set_value: watch!(self.lrtz_val),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLrtzVal(key.downgrade(), val.value()));
                             }
@@ -600,6 +634,7 @@ impl FactoryPrototype for RadPar {
                         append: lrtz_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::var_adjustment(),
                             set_digits: 1,
+                            set_value: watch!(self.lrtz_var),
                             set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetLrtzVar(key.downgrade(), val.value()));
@@ -614,6 +649,8 @@ impl FactoryPrototype for RadPar {
                         prepend: &gtk::Label::new(Some("Amount")),
                         append: amount_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::amount_adjustment(),
+                            set_digits: 1,
+                            set_value: watch!(self.amount_val),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetAmountVal(key.downgrade(), val.value()));
                             }
@@ -621,6 +658,7 @@ impl FactoryPrototype for RadPar {
                         append: amount_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::var_adjustment(),
                             set_digits: 1,
+                            set_value: watch!(self.amount_var),
                             set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetAmountVar(key.downgrade(), val.value()));
@@ -634,6 +672,8 @@ impl FactoryPrototype for RadPar {
                         prepend: &gtk::Label::new(Some("dh1")),
                         append: dh1_entry_val = &gtk::SpinButton {
                             set_adjustment: &RadPar::dh1_adjustment(),
+                            set_digits: 1,
+                            set_value: watch!(self.dh1_val),
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetDh1Val(key.downgrade(), val.value()));
                             }
@@ -641,6 +681,7 @@ impl FactoryPrototype for RadPar {
                         append: dh1_entry_var = &gtk::SpinButton {
                             set_adjustment: &RadPar::var_adjustment(),
                             set_digits: 1,
+                            set_value: watch!(self.dh1_var),
                             set_climb_rate: 0.5,
                             connect_value_changed(sender, key) => move |val| {
                                 send!(sender, RadParMsg::SetDh1Var(key.downgrade(), val.value()));
