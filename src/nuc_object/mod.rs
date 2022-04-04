@@ -2,7 +2,7 @@ mod imp;
 
 use crate::gtk::{
     subclass::prelude::*,
-    glib::{self, Object, ParamFlags, ParamSpec, ParamSpecInt, ToValue, Value,},
+    glib::{self, Object, ParamFlags, ParamSpec, ToValue, Value,},
     // prelude::{FilterExt, SorterExt},
 };
 

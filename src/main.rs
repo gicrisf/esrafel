@@ -222,7 +222,7 @@ enum AppMsg {
     UpdateRads(Vec<Radical>),
     SetSweep(f64),
     SetPoints(usize),  // then, temporarily convert to f64
-    UpdatePars,
+    RefreshPanel,
 }
 
 #[derive(relm4::Components)]
@@ -243,11 +243,12 @@ impl AppUpdate for AppModel {
         match msg {
             AppMsg::UpdateRads(new_rads) => {
                 self.rads = new_rads;
-                // DEBUGGING ONLY
+                // TODO Remove this, DEBUGGING ONLY
                 println!("{:?}", self.rads);
             }
-            AppMsg::UpdatePars => {
-                components.params.send(RadParMsg::Import(self.rads.clone())).expect("Refreshing param panel failed");
+            AppMsg::RefreshPanel => {
+                components.params.send(RadParMsg::Import(self.rads.clone()))
+                                 .expect("Refreshing param panel failed");
             }
             AppMsg::IterMontecarlo => {
                 // This is a fast and working solution, but a persistent iteration is not an elegant move
@@ -285,12 +286,6 @@ impl AppUpdate for AppModel {
                 }
             }
             AppMsg::ToggleMontecarlo(is_going) => {
-                // Sync new pars with the GUI
-                if !is_going {
-                    // Awful duplication of this from AppMsg::UpdatePars
-                    components.params.send(RadParMsg::Import(self.rads.clone())).expect("Refreshing param panel failed");
-                }
-
                 self.montecarlo = is_going;
             }  // ./Montecarlo
             AppMsg::Open(path) => {
@@ -470,7 +465,13 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                     set_label: "Run MonteCarlo",
                                     set_active: model.montecarlo,
                                     connect_clicked(sender) => move |v| {
-                                        send!(sender, AppMsg::ToggleMontecarlo(v.is_active()))
+                                        let is_mc_active = v.is_active();
+                                        send!(sender, AppMsg::ToggleMontecarlo(is_mc_active));
+
+                                        // Refresh Parameters in GUI when you stop running MC
+                                        if !is_mc_active {
+                                            send!(sender, AppMsg::RefreshPanel)
+                                        };
                                     }
                                 }
                             }
@@ -495,11 +496,11 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
 
-        // Update Rad panel
-        send!(sender, AppMsg::UpdatePars);
+        send!(sender, AppMsg::RefreshPanel);
 
         // IDEA How to send from thread and through components
         // let chart_sender = components.chart.sender();
+
         std::thread::spawn(move || loop {
             std::thread::sleep(std::time::Duration::from_millis(40));
             send!(sender, AppMsg::IterMontecarlo);

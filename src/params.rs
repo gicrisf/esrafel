@@ -1,7 +1,7 @@
 // use adw::prelude::BinExt;
 
 use gtk::{
-    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, Cast, ObjectExt, WidgetExt},
+    prelude::{BoxExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, ObjectExt, WidgetExt},
     gio, glib,
     };
 
@@ -29,14 +29,12 @@ enum NucParMsg {
 // And not messing with the proper Relm structure of the remaining panel
 
 struct NucFactoryModel {
-    // listbox_model: ListStore<NucParObject>,
     store: gio::ListStore,
 }
 
 impl NucFactoryModel {
     fn new() -> Self {
         NucFactoryModel {
-            // listbox_model: ListStore::new(NucParObject::static_type()),
             store: gio::ListStore::new(NucObject::static_type()),
         }
     }
@@ -201,12 +199,12 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
 
                 let spin_label = gtk::Label::new(Some("Spin"));
                 let spinval_spinbtn = gtk::SpinButton::new(Some(&Self::spin_adjustment()), 0.5, 1);
-                let spinvar_spinbtn = gtk::SpinButton::new(Some(&Self::var_adjustment()), 0.1, 1);
-
                 item.bind_property("spinval", &spinval_spinbtn, "value")
                     .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
                     .build();
 
+                // TODO Suppress spin variation
+                let spinvar_spinbtn = gtk::SpinButton::new(Some(&Self::var_adjustment()), 0.1, 1);
                 item.bind_property("spinvar", &spinvar_spinbtn, "value")
                     .flags(glib::BindingFlags::DEFAULT | glib::BindingFlags::SYNC_CREATE | glib::BindingFlags::BIDIRECTIONAL)
                     .build();
@@ -228,7 +226,7 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                 hbox.append(&eqs_spinbtn);
                 hbox.append(&spin_label);
                 hbox.append(&spinval_spinbtn);
-                hbox.append(&spinvar_spinbtn);
+                // hbox.append(&spinvar_spinbtn);
                 hbox.append(&hpf_label);
                 hbox.append(&hpfval_spinbtn);
                 hbox.append(&hpfvar_spinbtn);
