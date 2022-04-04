@@ -201,6 +201,61 @@ impl OpenButtonParent for AppModel {
     }
 }
 
+// EventLog Component
+// TODO distinguish between categories (error, warning, simple info updates...)
+// Keeping this simple for the moment
+
+struct EventLogModel {
+    log: Vec<String>,
+    last_toast: Option<adw::Toast>,
+}
+
+enum EventLogMsg {
+    New(String),
+}
+
+impl Model for EventLogModel {
+    type Msg = EventLogMsg;
+    type Widgets = EventLogWidgets;
+    type Components = ();
+}
+
+impl ComponentUpdate<AppModel> for EventLogModel {
+    fn init_model(_parent_model: &AppModel) -> Self {
+        EventLogModel {
+            log: Vec::new(),
+            last_toast: None,
+        }
+    }
+
+    fn update (&mut self, msg: EventLogMsg, _components: &(), _sender: Sender<EventLogMsg>, _parent_sender: Sender<AppMsg>) {
+        match msg {
+            EventLogMsg::New(msg) => {
+                self.log.push(msg.clone());
+                self.last_toast = Some(adw::Toast::new(&msg));
+            }
+        }  // match
+    }
+}
+
+#[relm4::widget]
+impl Widgets<EventLogModel, AppModel> for EventLogWidgets {
+    view! {
+        adw::ToastOverlay::new() {
+            // set_margin_top: 50,
+        }  // root widget
+    }
+}
+
+impl EventLogWidgets {
+    // Should I call this function with a custom signal?
+    // Isn't there a more relm-style method than subclassing a GObject?
+    fn raise_toast(&self, msg: &str) {
+        let toast = adw::Toast::new(msg);
+        self.root_widget().add_toast(&toast);
+    }
+}
+
 // -- AppModel
 
 #[derive(Default)]
@@ -230,6 +285,7 @@ struct AppComponents {
     chart: RelmComponent<ChartModel, AppModel>,
     params: RelmComponent<RadParModel, AppModel>,
     open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
+    logger: RelmComponent<EventLogModel, AppModel>,
 }
 
 impl Model for AppModel {
@@ -245,6 +301,9 @@ impl AppUpdate for AppModel {
                 self.rads = new_rads;
                 // TODO Remove this, DEBUGGING ONLY
                 println!("{:?}", self.rads);
+
+                components.logger.send(EventLogMsg::New("Updated!".into()))
+                    .expect("Cannot send to logger");
             }
             AppMsg::RefreshPanel => {
                 components.params.send(RadParMsg::Import(self.rads.clone()))
@@ -279,6 +338,8 @@ impl AppUpdate for AppModel {
                 } // if montecarlo toggled
             }
             AppMsg::Redraw => {
+                // TODO it shouldn't call directly the simulator function
+                // Must be compatible with every future simulator implementation
                 if self.montecarlo {
                     components.chart.send(ChartMsg::AddTheoretical(
                         sim::calcola(&self.rads, self.sweep, self.points as f64)))
@@ -301,15 +362,17 @@ impl AppUpdate for AppModel {
                             f.read_to_string(&mut data).expect("Unable to read string");
                             self.empirical = Some(esr_io::get_from_ascii(&data));
                         } // txt case
-                        // TODO show those messages with a toast
                         "esr" => {
-                            println!("Legacy format not supported yet!");
+                            components.logger.send(EventLogMsg::New("Legacy format not supported yet!".into()))
+                                .expect("Cannot send error to logger during while opening file");
                         }
                         "json" => {
-                            println!("JSON not supported yet!");
+                            components.logger.send(EventLogMsg::New("JSON not supported yet!".into()))
+                                             .expect("Cannot send error to logger during while opening file");
                         }  // json case
                         _ => {
-                            println!("How did you even opened this extension?!");
+                            components.logger.send(EventLogMsg::New("How did you even clicked on this file?!".into()))
+                                             .expect("Cannot send error to logger during while opening file");
                         }
                     }
                 }
@@ -485,6 +548,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                 },
                 append: bottom_bar = &adw::ViewSwitcherBar {
                     set_stack: Some(&stack),
+                },
+                append: logger = &adw::Bin {
+                    set_child: Some(components.logger.root_widget()),
                 }
             },  // set_content
         } // main_window
