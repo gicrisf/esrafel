@@ -280,9 +280,13 @@ fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
         rad.lrtz = rad.lrtz.randomize();
         rad.dh1 = rad.dh1.randomize();
 
+        let mut randomized_nucs = Vec::new();
         for mut nuc in rad.nucs.clone() {
             nuc.hpf = nuc.hpf.randomize();
+            randomized_nucs.push(nuc);
         }
+
+        rad.nucs = randomized_nucs;
 
         // TODO check this out
         rad = check_pars(rad);
