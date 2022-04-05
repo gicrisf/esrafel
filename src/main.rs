@@ -33,10 +33,12 @@ mod esr_io;
 mod sim;
 mod params;
 mod nuc_object;
+mod logger;
 
 use sim::Radical;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
+use logger::{EventLogModel, EventLogMsg};
 
 // -- Chart model
 
@@ -198,61 +200,6 @@ impl OpenButtonConfig for OpenFileButtonConfig {
 impl OpenButtonParent for AppModel {
     fn open_msg(path: PathBuf) -> Self::Msg {
         AppMsg::Open(path)
-    }
-}
-
-// EventLog Component
-// TODO distinguish between categories (error, warning, simple info updates...)
-// Keeping this simple for the moment
-
-struct EventLogModel {
-    log: Vec<String>,
-    last_toast: Option<adw::Toast>,
-}
-
-enum EventLogMsg {
-    New(String),
-}
-
-impl Model for EventLogModel {
-    type Msg = EventLogMsg;
-    type Widgets = EventLogWidgets;
-    type Components = ();
-}
-
-impl ComponentUpdate<AppModel> for EventLogModel {
-    fn init_model(_parent_model: &AppModel) -> Self {
-        EventLogModel {
-            log: Vec::new(),
-            last_toast: None,
-        }
-    }
-
-    fn update (&mut self, msg: EventLogMsg, _components: &(), _sender: Sender<EventLogMsg>, _parent_sender: Sender<AppMsg>) {
-        match msg {
-            EventLogMsg::New(msg) => {
-                self.log.push(msg.clone());
-                self.last_toast = Some(adw::Toast::new(&msg));
-            }
-        }  // match
-    }
-}
-
-#[relm4::widget]
-impl Widgets<EventLogModel, AppModel> for EventLogWidgets {
-    view! {
-        adw::ToastOverlay::new() {
-            // set_margin_top: 50,
-        }  // root widget
-    }
-}
-
-impl EventLogWidgets {
-    // Should I call this function with a custom signal?
-    // Isn't there a more relm-style method than subclassing a GObject?
-    fn raise_toast(&self, msg: &str) {
-        let toast = adw::Toast::new(msg);
-        self.root_widget().add_toast(&toast);
     }
 }
 
@@ -549,9 +496,12 @@ impl Widgets<AppModel, ()> for AppWidgets {
                 append: bottom_bar = &adw::ViewSwitcherBar {
                     set_stack: Some(&stack),
                 },
+                // Toast Overlay
                 append: logger = &adw::Bin {
                     set_child: Some(components.logger.root_widget()),
-                }
+                },
+                // Do I need a Bin? If not, just:
+                // append: components.logger.root_widget(),
             },  // set_content
         } // main_window
     }  // view!
