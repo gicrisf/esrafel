@@ -137,8 +137,8 @@ impl Widgets<ChartModel, AppModel> for ChartWidgets {
         // Memo: you can spawn a thread here
         //
         // std::thread::spawn(move || loop {
-            // std::thread::sleep(std::time::Duration::from_millis(20));
-            // send!(sender, ChartMsg::Update);
+        //  std::thread::sleep(std::time::Duration::from_millis(20));
+        //  send!(sender, ChartMsg::Update);
         // });
 
     }  // post init
@@ -214,6 +214,8 @@ struct AppModel {
     sigma: f64,
     iters: usize,
     montecarlo: bool,
+    last_toast: Option<adw::Toast>,
+    log: Vec<String>,
 }
 
 enum AppMsg {
@@ -225,6 +227,8 @@ enum AppMsg {
     SetSweep(f64),
     SetPoints(usize),  // then, temporarily convert to f64
     RefreshPanel,
+    SpawnToast(String),
+    ResetToast,
 }
 
 #[derive(relm4::Components)]
@@ -232,7 +236,7 @@ struct AppComponents {
     chart: RelmComponent<ChartModel, AppModel>,
     params: RelmComponent<RadParModel, AppModel>,
     open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
-    status: RelmComponent<StatusModel, AppModel>,
+    // status: RelmComponent<StatusModel, AppModel>,
 }
 
 impl Model for AppModel {
@@ -242,15 +246,14 @@ impl Model for AppModel {
 }
 
 impl AppUpdate for AppModel {
-    fn update(&mut self, msg: AppMsg, components: &AppComponents, _sender: Sender<AppMsg>) -> bool {
+    fn update(&mut self, msg: AppMsg, components: &AppComponents, sender: Sender<AppMsg>) -> bool {
         match msg {
             AppMsg::UpdateRads(new_rads) => {
                 self.rads = new_rads;
                 // TODO Remove this, DEBUGGING ONLY
                 println!("{:?}", self.rads);
 
-                components.status.send(StatusMsg::New("Updated!".into()))
-                    .expect("Cannot send to logger");
+                send!(sender, AppMsg::SpawnToast("Updated".into()));
             }
             AppMsg::RefreshPanel => {
                 components.params.send(RadParMsg::Import(self.rads.clone()))
@@ -310,16 +313,13 @@ impl AppUpdate for AppModel {
                             self.empirical = Some(esr_io::get_from_ascii(&data));
                         } // txt case
                         "esr" => {
-                            components.status.send(StatusMsg::New("Legacy format not supported yet!".into()))
-                                .expect("Cannot send error to logger during while opening file");
+                            send!(sender, AppMsg::SpawnToast("Legacy format not supported yet!".into()));
                         }
                         "json" => {
-                            components.status.send(StatusMsg::New("JSON not supported yet!".into()))
-                                             .expect("Cannot send error to logger during while opening file");
+                            send!(sender, AppMsg::SpawnToast("JSON format not supported yet!".into()));
                         }  // json case
                         _ => {
-                            components.status.send(StatusMsg::New("How did you even clicked on this file?!".into()))
-                                             .expect("Cannot send error to logger during while opening file");
+                            send!(sender, AppMsg::SpawnToast("How did you even clicked on this file?!".into()));
                         }
                     }
                 }
@@ -335,6 +335,13 @@ impl AppUpdate for AppModel {
             }
             AppMsg::SetPoints(value) => {
                 self.points = value;
+            }
+            AppMsg::SpawnToast(msg) => {
+                self.last_toast = Some(adw::Toast::new(&msg));
+                self.log.push(msg);
+            }
+            AppMsg::ResetToast => {
+                self.last_toast = None;
             }
         }
         true
@@ -387,121 +394,135 @@ impl Widgets<AppModel, ()> for AppWidgets {
                     },
                     set_centering_policy: CenteringPolicy::Strict,
                 },
-                append: stack = &adw::ViewStack {
-                    set_vexpand: true,
-                    add_titled(Some("Params"), "Parameters") = &gtk::Box {
-                        set_orientation: Orientation::Vertical,
-                        set_hexpand: false,
-                        set_spacing: 5,
-                        append = general_pars_box = &gtk::Box {
-                            set_orientation: Orientation::Horizontal,
-                            set_hexpand: true,
-                            set_spacing: 5,
-                            set_halign: gtk::Align::Fill,
-                            append = &gtk::Label {
-                                set_label: "General parameters: ",
-                            },
-                            append: sweep_entry = &gtk::Box {
-                                set_orientation: gtk::Orientation::Horizontal,
-                                set_spacing: 5,
-                                set_homogeneous: true,
-                                append: &gtk::Label::new(Some("Sweep")),
-                                append: sweep_spin = &gtk::SpinButton {
-                                    set_adjustment: &gtk::Adjustment::new(
-                                        model.sweep,  // value
-                                        0.0,  // lower
-                                        100000000.0,  // upper
-                                        10.0,  // step_increment
-                                        100.0,  // page_increment
-                                        1000.0  // page_size
-                                    ),
-                                    connect_value_changed(sender) => move |val| {
-                                        send!(sender, AppMsg::SetSweep(val.value()))
-                                    }
-                                },
-                            },
-                            append: points_entry = &gtk::Box {
-                                set_orientation: gtk::Orientation::Horizontal,
-                                set_spacing: 5,
-                                set_homogeneous: true,
-                                append: &gtk::Label::new(Some("Points")),
-                                append: points_spin = &gtk::SpinButton {
-                                    set_adjustment: &gtk::Adjustment::new(
-                                        model.points as f64,  // value
-                                        0.0,  // lower
-                                        100000000.0,  // upper
-                                        1.0,  // step_increment
-                                        10.0,  // page_increment
-                                        1000.0  // page_size
-                                    ),
-                                    connect_value_changed(sender) => move |val| {
-                                        send!(sender, AppMsg::SetPoints(val.value_as_int() as usize));
-                                    }
-                                },
-                            },
-                        },  // ./ general pars box
-                        append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
-                            set_margin_bottom: 5,
-                        },
-                        append = &gtk::ScrolledWindow {
-                            set_hscrollbar_policy: gtk::PolicyType::Never,
-                            set_min_content_height: 360,
+                append: body = &gtk::Box {
+                    set_orientation: gtk::Orientation::Vertical,
+                    // append: status_bar = &adw::Bin {
+                        // set_child: Some(components.status.root_widget())
+                    // },
+                    append: toast_overlay = &adw::ToastOverlay {
+                        set_child: stack = Some(&adw::ViewStack) {
                             set_vexpand: true,
-                            set_child: Some(components.params.root_widget()),
-                        },
-                    } -> params_page: ViewStackPage {
-                        set_icon_name: Some("document-print-symbolic"),
-                        set_badge_number: watch!(model.rads.len() as u32),
-                    },
-                    add_titled(Some("Plot"), "Plot") = &gtk::Box {
-                        set_orientation: Orientation::Vertical,
-                        set_hexpand: false,
+                            add_titled(Some("Params"), "Parameters") = &gtk::Box {
+                                set_orientation: Orientation::Vertical,
+                                set_hexpand: false,
+                                set_spacing: 5,
+                                append = general_pars_box = &gtk::Box {
+                                    set_orientation: Orientation::Horizontal,
+                                    set_hexpand: true,
+                                    set_spacing: 5,
+                                    set_halign: gtk::Align::Fill,
+                                    append = &gtk::Label {
+                                        set_label: "General parameters: ",
+                                    },
+                                    append: sweep_entry = &gtk::Box {
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_spacing: 5,
+                                        set_homogeneous: true,
+                                        append: &gtk::Label::new(Some("Sweep")),
+                                        append: sweep_spin = &gtk::SpinButton {
+                                            set_adjustment: &gtk::Adjustment::new(
+                                                model.sweep,  // value
+                                                0.0,  // lower
+                                                100000000.0,  // upper
+                                                10.0,  // step_increment
+                                                100.0,  // page_increment
+                                                1000.0  // page_size
+                                            ),
+                                            connect_value_changed(sender) => move |val| {
+                                                send!(sender, AppMsg::SetSweep(val.value()))
+                                            }
+                                        },
+                                    },
+                                    append: points_entry = &gtk::Box {
+                                        set_orientation: gtk::Orientation::Horizontal,
+                                        set_spacing: 5,
+                                        set_homogeneous: true,
+                                        append: &gtk::Label::new(Some("Points")),
+                                        append: points_spin = &gtk::SpinButton {
+                                            set_adjustment: &gtk::Adjustment::new(
+                                                model.points as f64,  // value
+                                                0.0,  // lower
+                                                100000000.0,  // upper
+                                                1.0,  // step_increment
+                                                10.0,  // page_increment
+                                                1000.0  // page_size
+                                            ),
+                                            connect_value_changed(sender) => move |val| {
+                                                send!(sender, AppMsg::SetPoints(val.value_as_int() as usize));
+                                            }
+                                        },
+                                    },
+                                },  // ./ general pars box
+                                append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
+                                    set_margin_bottom: 5,
+                                },
+                                append = &gtk::ScrolledWindow {
+                                    set_hscrollbar_policy: gtk::PolicyType::Never,
+                                    set_min_content_height: 360,
+                                    set_vexpand: true,
+                                    set_child: Some(components.params.root_widget()),
+                                },
+                            } -> params_page: ViewStackPage {
+                                set_icon_name: Some("document-print-symbolic"),
+                                set_badge_number: watch!(model.rads.len() as u32),
+                            },
+                            add_titled(Some("Plot"), "Plot") = &gtk::Box {
+                                set_orientation: Orientation::Vertical,
+                                set_hexpand: false,
 
-                        // `component!` seems like it's still a not supported macro?
-                        // append: component!(Some(chart)),
-                        // ALERT, the next line couldn't work in other branches
-                        append = &adw::Bin {
-                            set_child: Some(components.chart.root_widget()),
-                        },
+                                // `component!` seems like it's still a not supported macro?
+                                // append: component!(Some(chart)),
+                                // ALERT, the next line couldn't work in other branches
+                                append = &adw::Bin {
+                                    set_child: Some(components.chart.root_widget()),
+                                },
 
-                        append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
-                            set_margin_bottom: 5,
-                        },
+                                append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
+                                    set_margin_bottom: 5,
+                                },
 
-                        append = &adw::Bin {
-                            set_margin_bottom: 5,
-                            set_child = Some(&gtk::CenterBox) {
-                                set_center_widget = Some(&gtk::ToggleButton) {
-                                    set_label: "Run MonteCarlo",
-                                    set_active: model.montecarlo,
-                                    connect_clicked(sender) => move |v| {
-                                        let is_mc_active = v.is_active();
-                                        send!(sender, AppMsg::ToggleMontecarlo(is_mc_active));
+                                append = &adw::Bin {
+                                    set_margin_bottom: 5,
+                                    set_child = Some(&gtk::CenterBox) {
+                                        set_center_widget = Some(&gtk::ToggleButton) {
+                                            set_label: "Run MonteCarlo",
+                                            set_active: model.montecarlo,
+                                            connect_clicked(sender) => move |v| {
+                                                let is_mc_active = v.is_active();
+                                                send!(sender, AppMsg::ToggleMontecarlo(is_mc_active));
 
-                                        // Refresh Parameters in GUI when you stop running MC
-                                        if !is_mc_active {
-                                            send!(sender, AppMsg::RefreshPanel)
-                                        };
+                                                // Refresh Parameters in GUI when you stop running MC
+                                                if !is_mc_active {
+                                                    send!(sender, AppMsg::RefreshPanel)
+                                                };
+                                            }
+                                        }
                                     }
-                                }
-                            }
+                                },
+
+                            } -> plot_page: ViewStackPage {
+                                set_icon_name: Some("media-playback-start-symbolic"),
+                                set_needs_attention: watch!(model.montecarlo),
+                            },
                         },
-
-
-                    } -> plot_page: ViewStackPage {
-                        set_icon_name: Some("media-playback-start-symbolic"),
-                        set_needs_attention: watch!(model.montecarlo),
                     },
+                    // append: stack = &adw::ViewStack {  },
                 },
+                // TODO Explore this `bottom_bar`
                 append: bottom_bar = &adw::ViewSwitcherBar {
                     set_stack: Some(&stack),
                 },
-                append: status_bar = &adw::Bin {
-                    set_child: Some(components.status.root_widget())
-                }
+
             },  // set_content
         } // main_window
     }  // view!
+
+    fn pre_view() {
+        if let Some(toast) = &model.last_toast {
+            self.toast_overlay.add_toast(&toast);
+            send!(sender, AppMsg::ResetToast);
+        }
+    }
 
     fn post_init() {
        title
@@ -534,12 +555,15 @@ impl ParentWindow for AppWidgets {
 fn main() {
     let model = AppModel {
         empirical: None,
+        // TODO start without radicals and show welcome screen
         rads: vec![Radical::var_probe()],
         points: 1024,
         sweep: 100.0,
         sigma: 100000000000000000000.0,  //1e+20
         iters: 0,
         montecarlo: false,
+        last_toast: None,
+        log: Vec::new(),
     };
     let app = RelmApp::new(model);
     app.run();
