@@ -1,39 +1,42 @@
 use crate::{AppModel, AppMsg};
+use crate::{adw, gtk};
 
 use relm4::{Widgets, Sender, ComponentUpdate, Model};
+use gtk::{
+    prelude::{WidgetExt, OrientableExt}
+};
 
-use crate::adw;
-
-// EventLog Component
-// TODO distinguish between categories (error, warning, simple info updates...)
+// Status Component
+//
+// TODO logging in categories (error, warning, simple info updates...)
 // Keeping this simple for the moment
 
-pub struct EventLogModel {
+pub struct StatusModel {
     log: Vec<String>,
     last_toast: Option<adw::Toast>,
 }
 
-pub enum EventLogMsg {
+pub enum StatusMsg {
     New(String),
 }
 
-impl Model for EventLogModel {
-    type Msg = EventLogMsg;
-    type Widgets = EventLogWidgets;
+impl Model for StatusModel {
+    type Msg = StatusMsg;
+    type Widgets = StatusWidgets;
     type Components = ();
 }
 
-impl ComponentUpdate<AppModel> for EventLogModel {
+impl ComponentUpdate<AppModel> for StatusModel {
     fn init_model(_parent_model: &AppModel) -> Self {
-        EventLogModel {
+        StatusModel {
             log: Vec::new(),
             last_toast: None,
         }
     }
 
-    fn update (&mut self, msg: EventLogMsg, _components: &(), _sender: Sender<EventLogMsg>, _parent_sender: Sender<AppMsg>) {
+    fn update (&mut self, msg: StatusMsg, _components: &(), _sender: Sender<StatusMsg>, _parent_sender: Sender<AppMsg>) {
         match msg {
-            EventLogMsg::New(msg) => {
+            StatusMsg::New(msg) => {
                 self.last_toast = Some(adw::Toast::new(&msg));
                 self.log.push(msg);
             }
@@ -42,10 +45,13 @@ impl ComponentUpdate<AppModel> for EventLogModel {
 }
 
 #[relm4::widget(pub)]
-impl Widgets<EventLogModel, AppModel> for EventLogWidgets {
+impl Widgets<StatusModel, AppModel> for StatusWidgets {
     view! {
         adw::ToastOverlay::new() {
-            // set_margin_top: 50,
+            set_child = Some(&gtk::Box) {
+                set_margin_top: 85,
+                set_orientation: gtk::Orientation::Horizontal,
+            },
         }  // root widget
     }
 

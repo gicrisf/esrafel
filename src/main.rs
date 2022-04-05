@@ -38,7 +38,7 @@ mod logger;
 use sim::Radical;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
-use logger::{EventLogModel, EventLogMsg};
+use logger::{StatusModel, StatusMsg};
 
 // -- Chart model
 
@@ -232,7 +232,7 @@ struct AppComponents {
     chart: RelmComponent<ChartModel, AppModel>,
     params: RelmComponent<RadParModel, AppModel>,
     open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
-    logger: RelmComponent<EventLogModel, AppModel>,
+    status: RelmComponent<StatusModel, AppModel>,
 }
 
 impl Model for AppModel {
@@ -249,7 +249,7 @@ impl AppUpdate for AppModel {
                 // TODO Remove this, DEBUGGING ONLY
                 println!("{:?}", self.rads);
 
-                components.logger.send(EventLogMsg::New("Updated!".into()))
+                components.status.send(StatusMsg::New("Updated!".into()))
                     .expect("Cannot send to logger");
             }
             AppMsg::RefreshPanel => {
@@ -310,15 +310,15 @@ impl AppUpdate for AppModel {
                             self.empirical = Some(esr_io::get_from_ascii(&data));
                         } // txt case
                         "esr" => {
-                            components.logger.send(EventLogMsg::New("Legacy format not supported yet!".into()))
+                            components.status.send(StatusMsg::New("Legacy format not supported yet!".into()))
                                 .expect("Cannot send error to logger during while opening file");
                         }
                         "json" => {
-                            components.logger.send(EventLogMsg::New("JSON not supported yet!".into()))
+                            components.status.send(StatusMsg::New("JSON not supported yet!".into()))
                                              .expect("Cannot send error to logger during while opening file");
                         }  // json case
                         _ => {
-                            components.logger.send(EventLogMsg::New("How did you even clicked on this file?!".into()))
+                            components.status.send(StatusMsg::New("How did you even clicked on this file?!".into()))
                                              .expect("Cannot send error to logger during while opening file");
                         }
                     }
@@ -496,12 +496,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                 append: bottom_bar = &adw::ViewSwitcherBar {
                     set_stack: Some(&stack),
                 },
-                // Toast Overlay
-                append: logger = &adw::Bin {
-                    set_child: Some(components.logger.root_widget()),
-                },
-                // Do I need a Bin? If not, just:
-                // append: components.logger.root_widget(),
+                append: status_bar = &adw::Bin {
+                    set_child: Some(components.status.root_widget())
+                }
             },  // set_content
         } // main_window
     }  // view!
