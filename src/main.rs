@@ -33,12 +33,10 @@ mod esr_io;
 mod sim;
 mod params;
 mod nuc_object;
-mod logger;
 
 use sim::Radical;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
-use logger::{StatusModel, StatusMsg};
 
 // -- Chart model
 
