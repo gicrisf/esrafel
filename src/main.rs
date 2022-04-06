@@ -457,9 +457,6 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                     },
 
                                 },  // ./ general pars box
-                                append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
-                                    set_margin_bottom: 5,
-                                },
                                 append = &gtk::ScrolledWindow {
                                     set_hscrollbar_policy: gtk::PolicyType::Never,
                                     set_min_content_height: 360,

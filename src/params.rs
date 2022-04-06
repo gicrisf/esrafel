@@ -632,29 +632,33 @@ impl FactoryPrototype for RadPar {
                     set_margin_bottom: 5,
                     set_margin_start: 5,
                     set_margin_end: 5,
-                    set_orientation: gtk::Orientation::Horizontal,
+                    set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 5,
                     append: par_general_box = &gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
+                        set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 5,
-                        append: counter_button = &gtk::Button {
-                            set_label: watch!(&self.value.to_string()),
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::CountAt(key.downgrade()));
-                            }
-                        },
-                        append: remove_button = &gtk::Button {
-                            set_label: "Remove",
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::RemoveAt(key.downgrade()));
-                            }
-                        },
-                        append: ins_above_button = &gtk::Button {
-                            set_label: "Add above",
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::InsertBefore(key.downgrade()));
-                            }
-                        },
+                        set_margin_bottom: 15,
+                        // set_halign: gtk::Align::Center,
+
+                        // TODO entry function
+                        // Until that moment, we don't need this button either
+                        //
+                        // append: counter_button = &gtk::Button {
+                        //   set_label: watch!(&self.value.to_string()),
+                        //    connect_clicked(sender, key) => move |_| {
+                        //        send!(sender, RadParMsg::CountAt(key.downgrade()));
+                        //    }
+                        // },
+
+                        // Don't need this button
+                        //
+                        // append: ins_above_button = &gtk::Button {
+                        //    set_label: "Add above",
+                        //    connect_clicked(sender, key) => move |_| {
+                        //        send!(sender, RadParMsg::InsertBefore(key.downgrade()));
+                        //    }
+                        // },
+
                         append: ins_below_button = &gtk::Button {
                             set_label: "Add below",
                             connect_clicked(sender, key) => move |_| {
@@ -673,15 +677,24 @@ impl FactoryPrototype for RadPar {
                                 send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
                             }
                         },
+                        append: remove_button = &gtk::Button {
+                            set_label: "Remove",
+                            // TODO Pop up a dialog with a really destructive button
+                            // set_css_classes: &["destructive-action"],
+                            connect_clicked(sender, key) => move |_| {
+                                send!(sender, RadParMsg::RemoveAt(key.downgrade()));
+                            }
+                        },
                     },
                     append: rad_params_box = &gtk::Box {
-                        set_orientation: gtk::Orientation::Vertical,
+                        set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 5,
                         set_homogeneous: true,
 
                         append = &gtk::Grid {
                             set_row_spacing: 5,
                             set_column_spacing: 5,
+                            set_halign: gtk::Align::Center,
                             attach(0, 0, 1, 1): lwa_label = &gtk::Label {
                                 set_label: "LWA",
                             },
@@ -769,10 +782,20 @@ impl FactoryPrototype for RadPar {
                         append: nuc_factory_box = &gtk::Box {
                             set_orientation: gtk::Orientation::Horizontal,
                             set_spacing: 5,
-                            append: nucs_box = &gtk::Box {
-                                set_orientation: gtk::Orientation::Vertical,
-                                set_spacing: 5,
-                                append: self.nuc_factory.root_widget(),
+                            append: nuc_entries_frame = &gtk::Frame {
+                                set_label_widget = Some(&gtk::Label) {
+                                    set_label: "Nuclei",
+                                    set_css_classes: &["heading", "h4"],
+                                },
+                                set_margin_top: 5,
+                                set_margin_bottom: 5,
+                                set_margin_start: 5,
+                                set_margin_end: 5,
+                                set_child = Some(&gtk::Box) {
+                                    set_orientation: gtk::Orientation::Vertical,
+                                    set_spacing: 5,
+                                    append: self.nuc_factory.root_widget(),
+                                }
                             }
                         }
                     },
@@ -815,17 +838,41 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
             .spacing(5)
             .build();
 
+        let button_box = gtk::Box::builder()
+            .orientation(gtk::Orientation::Horizontal)
+            .margin_end(5)
+            .margin_top(5)
+            .margin_start(5)
+            .margin_bottom(5)
+            .halign(gtk::Align::Center)
+            .spacing(5)
+            .build();
+
+        // Append new radical to the vector
         let add = gtk::Button::with_label("Add Rad");
+
+        // Not added to the UI
         let remove = gtk::Button::with_label("Remove Rad");
+        remove.set_css_classes(&["destructive-action"]);
+
+        // Convert UI data in simulator parameters
         let update = gtk::Button::with_label("Update Simulator");
+        update.set_css_classes(&["suggested-action"]);
+
         // TODO cancel function
         // let cancel = gtk::Button::with_label("Cancel");
 
         main_box.append(&gen_box);
 
-        main_box.append(&add);
-        main_box.append(&remove);
-        main_box.append(&update);
+        button_box.append(&add);
+
+        // This button removes the last radical of the vector
+        // Functional but suppressed
+        // You can recover it, if you need it
+        // main_box.append(&remove);
+
+        button_box.append(&update);
+        main_box.append(&button_box);
 
         let sender_cloned_0 = sender.clone();
         let sender_cloned_1 = sender.clone();
