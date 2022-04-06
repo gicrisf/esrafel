@@ -5,7 +5,7 @@ use adw::{
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt, Cast, CheckButtonExt, PopoverExt},
+              DrawingAreaExt, Cast, CheckButtonExt, PopoverExt, FrameExt},
     Orientation,
     cairo::Context,
 };
@@ -407,49 +407,55 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                 append = general_pars_box = &gtk::Box {
                                     set_orientation: Orientation::Horizontal,
                                     set_hexpand: true,
+                                    set_halign: gtk::Align::Center,
+                                    set_margin_top: 5,
+                                    set_margin_start: 5,
                                     set_spacing: 5,
-                                    set_halign: gtk::Align::Fill,
-                                    append = &gtk::Label {
-                                        set_label: "General parameters: ",
+                                    append = &gtk::Frame {
+                                        // set_label: Some("General"),
+                                        set_width_request: 715,
+                                        set_child = Some(&gtk::Box) {
+                                            append: sweep_entry = &gtk::Box {
+                                                set_orientation: gtk::Orientation::Horizontal,
+                                                set_spacing: 5,
+                                                set_homogeneous: true,
+                                                append: &gtk::Label::new(Some("Sweep")),
+                                                append: sweep_spin = &gtk::SpinButton {
+                                                    set_adjustment: &gtk::Adjustment::new(
+                                                        model.sweep,  // value
+                                                        0.0,  // lower
+                                                        100000000.0,  // upper
+                                                        10.0,  // step_increment
+                                                        100.0,  // page_increment
+                                                        1000.0  // page_size
+                                                    ),
+                                                    connect_value_changed(sender) => move |val| {
+                                                        send!(sender, AppMsg::SetSweep(val.value()))
+                                                    }
+                                                },
+                                            },
+                                            append: points_entry = &gtk::Box {
+                                                set_orientation: gtk::Orientation::Horizontal,
+                                                set_spacing: 5,
+                                                set_homogeneous: true,
+                                                append: &gtk::Label::new(Some("Points")),
+                                                append: points_spin = &gtk::SpinButton {
+                                                    set_adjustment: &gtk::Adjustment::new(
+                                                        model.points as f64,  // value
+                                                        0.0,  // lower
+                                                        100000000.0,  // upper
+                                                        1.0,  // step_increment
+                                                        10.0,  // page_increment
+                                                        1000.0  // page_size
+                                                    ),
+                                                    connect_value_changed(sender) => move |val| {
+                                                        send!(sender, AppMsg::SetPoints(val.value_as_int() as usize));
+                                                    }
+                                                },
+                                            },
+                                        }
                                     },
-                                    append: sweep_entry = &gtk::Box {
-                                        set_orientation: gtk::Orientation::Horizontal,
-                                        set_spacing: 5,
-                                        set_homogeneous: true,
-                                        append: &gtk::Label::new(Some("Sweep")),
-                                        append: sweep_spin = &gtk::SpinButton {
-                                            set_adjustment: &gtk::Adjustment::new(
-                                                model.sweep,  // value
-                                                0.0,  // lower
-                                                100000000.0,  // upper
-                                                10.0,  // step_increment
-                                                100.0,  // page_increment
-                                                1000.0  // page_size
-                                            ),
-                                            connect_value_changed(sender) => move |val| {
-                                                send!(sender, AppMsg::SetSweep(val.value()))
-                                            }
-                                        },
-                                    },
-                                    append: points_entry = &gtk::Box {
-                                        set_orientation: gtk::Orientation::Horizontal,
-                                        set_spacing: 5,
-                                        set_homogeneous: true,
-                                        append: &gtk::Label::new(Some("Points")),
-                                        append: points_spin = &gtk::SpinButton {
-                                            set_adjustment: &gtk::Adjustment::new(
-                                                model.points as f64,  // value
-                                                0.0,  // lower
-                                                100000000.0,  // upper
-                                                1.0,  // step_increment
-                                                10.0,  // page_increment
-                                                1000.0  // page_size
-                                            ),
-                                            connect_value_changed(sender) => move |val| {
-                                                send!(sender, AppMsg::SetPoints(val.value_as_int() as usize));
-                                            }
-                                        },
-                                    },
+
                                 },  // ./ general pars box
                                 append = &gtk::Separator::new(gtk::Orientation::Horizontal) {
                                     set_margin_bottom: 5,
