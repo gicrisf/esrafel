@@ -5,7 +5,7 @@ use adw::{
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt, Cast, CheckButtonExt, PopoverExt, FrameExt},
+              DrawingAreaExt, Cast, CheckButtonExt, PopoverExt, FrameExt, ComboBoxExtManual},
     Orientation,
     cairo::Context,
 };
@@ -203,6 +203,15 @@ impl OpenButtonParent for AppModel {
 
 // -- AppModel
 
+// Available simulation methods
+// This will make it easier further extensions of thee backend
+
+enum SimulationMethod {
+    MC199,
+    // Dynamic1999
+    // ...
+}
+
 #[derive(Default)]
 struct AppModel {
     empirical: Option<Vec<f64>>,
@@ -214,6 +223,7 @@ struct AppModel {
     montecarlo: bool,
     last_toast: Option<adw::Toast>,
     log: Vec<String>,
+    sim_method: Option<SimulationMethod>,
 }
 
 enum AppMsg {
@@ -227,6 +237,7 @@ enum AppMsg {
     RefreshPanel,
     SpawnToast(String),
     ResetToast,
+    SetSimMethod(SimulationMethod),
 }
 
 #[derive(relm4::Components)]
@@ -306,9 +317,34 @@ impl AppUpdate for AppModel {
 
                     match ext_as_str {
                         "txt" => {
-                            let mut f = File::open(path).expect("Unable to open txt file");
-                            f.read_to_string(&mut data).expect("Unable to read string");
-                            self.empirical = Some(esr_io::get_from_ascii(&data));
+                            let f: Option<File>;
+
+                            match File::open(path) {
+                                Ok(file) => f = Some(file),
+                                Err(e) => {
+                                    let err_string = format!("Unable to open txt file. Error: {}", e);
+                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                    f = None;
+                                }
+                            };
+
+                            match f {
+                                Some(mut file) => {
+                                    match file.read_to_string(&mut data) {
+                                        Ok(_) => {
+                                            self.empirical = Some(esr_io::get_from_ascii(&data));
+                                            send!(sender, AppMsg::SpawnToast("Loaded!".into()));
+                                        },
+                                        Err(e) => {
+                                            let err_string = format!("Unable to read string in this file. Error: {}", e);
+                                            send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                        }
+                                    }
+                                }
+                                None => {
+                                    // Do nothing
+                                }
+                            }
                         } // txt case
                         "esr" => {
                             send!(sender, AppMsg::SpawnToast("Legacy format not supported yet!".into()));
@@ -340,6 +376,9 @@ impl AppUpdate for AppModel {
             }
             AppMsg::ResetToast => {
                 self.last_toast = None;
+            }
+            AppMsg::SetSimMethod(method) => {
+                self.sim_method = Some(method);
             }
         }
         true
@@ -413,14 +452,17 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                     set_spacing: 5,
                                     append = &gtk::Frame {
                                         // set_label: Some("General"),
-                                        set_width_request: 715,
+                                        // TODO remove this request
+                                        // set_width_request: 715,
                                         set_child = Some(&gtk::Box) {
                                             append: sweep_entry = &gtk::Box {
                                                 set_orientation: gtk::Orientation::Horizontal,
                                                 set_spacing: 5,
+                                                set_margin_start: 5,
+                                                set_margin_end: 5,
                                                 set_margin_top: 5,
                                                 set_margin_bottom: 5,
-                                                set_homogeneous: true,
+                                                // set_homogeneous: true,
                                                 append: &gtk::Label::new(Some("Sweep")),
                                                 append: sweep_spin = &gtk::SpinButton {
                                                     set_adjustment: &gtk::Adjustment::new(
@@ -441,7 +483,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                 set_spacing: 5,
                                                 set_margin_top: 5,
                                                 set_margin_bottom: 5,
-                                                set_homogeneous: true,
+                                                set_margin_start: 5,
+                                                set_margin_end: 5,
+                                                // set_homogeneous: true,
                                                 append: &gtk::Label::new(Some("Points")),
                                                 append: points_spin = &gtk::SpinButton {
                                                     set_adjustment: &gtk::Adjustment::new(
@@ -457,6 +501,19 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                     }
                                                 },
                                             },
+                                            append = &gtk::Box {
+                                                set_orientation: gtk::Orientation::Horizontal,
+                                                set_spacing: 5,
+                                                set_margin_start: 5,
+                                                set_margin_end: 5,
+                                                set_margin_top: 5,
+                                                set_margin_bottom: 5,
+                                                append: &gtk::Label::new(Some("Simulation method")),
+                                                append: sim_method_entry = &gtk::ComboBoxText {
+                                                    append_text: "MC 1999"
+                                                },  // toggle button
+                                            },
+
                                         }
                                     },
 
@@ -527,6 +584,25 @@ impl Widgets<AppModel, ()> for AppWidgets {
             self.toast_overlay.add_toast(&toast);
             send!(sender, AppMsg::ResetToast);
         }
+
+        match &model.sim_method {
+            Some(method) => {
+                match method {
+                    SimulationMethod::MC199 => {
+                        self.sim_method_entry.set_active(Some(0));
+                    }
+                }
+            }
+            None => {
+                // Do nothing except:
+                // Invite choosing a method
+                // send!(sender, AppMsg::SpawnToast("Choose a simulation method!".into()));
+                //
+                // Leaved as is, this could never start the actual GUI
+                // Considering the fact that this is basically unreachable
+                // it's better not to overcomplicate this section
+            }
+        }
     }
 
     fn post_init() {
@@ -569,6 +645,7 @@ fn main() {
         montecarlo: false,
         last_toast: None,
         log: Vec::new(),
+        sim_method: Some(SimulationMethod::MC199),
     };
     let app = RelmApp::new(model);
     app.run();
