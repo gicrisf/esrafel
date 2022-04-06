@@ -168,9 +168,10 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
             .vexpand(true)
             .build();
 
-        main_box.append(&name);
-        main_box.append(&add);
-        main_box.append(&remove);
+        // TODO restore suppressed entry name for the moment
+        // main_box.append(&name);
+        // main_box.append(&add);
+        // main_box.append(&remove);
         main_box.append(&scroller);
 
         let sender2 = sender.clone();
@@ -437,6 +438,8 @@ pub enum RadParMsg {
     SetAmountVar(WeakDynamicIndex, f64),
     SetDh1Val(WeakDynamicIndex, f64),
     SetDh1Var(WeakDynamicIndex, f64),
+    AddNuc(WeakDynamicIndex, String),
+    RemoveLastNuc(WeakDynamicIndex),
 }
 
 pub struct RadParModel {
@@ -582,6 +585,22 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     }
                 }
             }
+            RadParMsg::AddNuc(weak_index, val) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        let nuc_sender = counter.nuc_factory.sender();
+                        send!(nuc_sender, NucParMsg::Add(val));
+                    }
+                }
+            }
+            RadParMsg::RemoveLastNuc(weak_index) => {
+                if let Some(index) = weak_index.upgrade() {
+                    if let Some(counter) = self.pars.get_mut(index.current_index()) {
+                        let nuc_sender = counter.nuc_factory.sender();
+                        send!(nuc_sender, NucParMsg::RemoveLast);
+                    }
+                }
+            }
         }
         self.received_messages += 1;
     }
@@ -599,9 +618,11 @@ impl FactoryPrototype for RadPar {
             set_orientation: gtk::Orientation::Vertical,
             set_spacing: 5,
             // TODO make entry for name
-
             append: entries_frame = &gtk::Frame {
-                set_label: Some("Radical"),
+                set_label_widget = Some(&gtk::Label) {
+                    set_label: "Radical",
+                    set_css_classes: &["heading", "h4"],
+                },
                 set_margin_top: 5,
                 set_margin_bottom: 5,
                 set_margin_start: 5,
@@ -640,6 +661,18 @@ impl FactoryPrototype for RadPar {
                                 send!(sender, RadParMsg::InsertAfter(key.downgrade()));
                             }
                         },
+                        append: add_new_nuc = &gtk::Button {
+                            set_label: "Add Nucleus",
+                            connect_clicked(sender, key) => move |_| {
+                                send!(sender, RadParMsg::AddNuc(key.downgrade(), "New Nucleus".into()));
+                            }
+                        },
+                        append: remove_last_nuc = &gtk::Button {
+                            set_label: "Remove last Nuc",
+                            connect_clicked(sender, key) => move |_| {
+                                send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
+                            }
+                        },
                     },
                     append: rad_params_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Vertical,
@@ -652,6 +685,7 @@ impl FactoryPrototype for RadPar {
                             attach(0, 0, 1, 1): lwa_label = &gtk::Label {
                                 set_label: "LWA",
                             },
+                            // "next_to" allows to maintain more flexibility for future movements
                             attach_next_to(Some(&lwa_label), gtk::PositionType::Right, 1, 1): lwa_entry_val =
                                 &gtk::SpinButton {
                                     set_adjustment: &RadPar::lwa_adjustment(),
