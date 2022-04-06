@@ -19,7 +19,7 @@ impl Color {
         }
     }
 
-    pub fn original(name: &str) -> Color {
+    pub fn _original(name: &str) -> Color {
         match name {
             "DarkCyan" => Color::rgb(1.0, 46.0, 64.0),
             "LightCyan" => Color::rgb(79.0, 134.0, 140.0),
@@ -27,7 +27,7 @@ impl Color {
         }
     }
 
-    pub fn solarized(name: &str) -> Color {
+    pub fn _solarized(name: &str) -> Color {
         match name {
             "White" => Color::rgb(238.0, 232.0, 213.0),
             "Orange" => Color::rgb(203.0, 75.0, 22.0),
@@ -146,13 +146,13 @@ pub fn draw_classic(cr: &Context, line: &Line, w: f64, h: f64, color: &Color) {
 }
 
 
-pub fn draw_noise(cr: &Context, line: &Line, w: f64, h: f64, color: &Color) {
+pub fn _draw_noise(cr: &Context, line: &Line, w: f64, h: f64, color: &Color) {
     cr.set_line_width(1.0);
     let (a, b, c) = color.as_tuple();
     cr.set_source_rgb(a, b, c);
 
     let verti_center = h/2.0;
-    let horiz_center = w/2.0;
+    // let horiz_center = w/2.0;
     let x_incr = w / (line.length as f64);
 
     let mut pointer = 0.0;

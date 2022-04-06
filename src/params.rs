@@ -426,10 +426,10 @@ pub enum RadParMsg {
     RemoveLast,
     Update,
     Import(Vec<Radical>),  // TODO Sync?
-    CountAt(WeakDynamicIndex),
+    _CountAt(WeakDynamicIndex),
     RemoveAt(WeakDynamicIndex),
-    InsertBefore(WeakDynamicIndex),
-    InsertAfter(WeakDynamicIndex),
+    _InsertBefore(WeakDynamicIndex),
+    _InsertAfter(WeakDynamicIndex),
     SetLwaVal(WeakDynamicIndex, f64),
     SetLwaVar(WeakDynamicIndex, f64),
     SetLrtzVal(WeakDynamicIndex, f64),
@@ -501,7 +501,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     }
                 }
             }
-            RadParMsg::CountAt(weak_index) => {
+            RadParMsg::_CountAt(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     if let Some(counter) = self.pars.get_mut(index.current_index()) {
                         counter.value = counter.value.wrapping_sub(1);
@@ -513,7 +513,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     self.pars.remove(index.current_index());
                 }
             }
-            RadParMsg::InsertBefore(weak_index) => {
+            RadParMsg::_InsertBefore(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.insert(
                         index.current_index(),
@@ -521,7 +521,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
                     );
                 }
             }
-            RadParMsg::InsertAfter(weak_index) => {
+            RadParMsg::_InsertAfter(weak_index) => {
                 if let Some(index) = weak_index.upgrade() {
                     self.pars.insert(
                         index.current_index() + 1,
@@ -618,6 +618,7 @@ impl FactoryPrototype for RadPar {
             set_orientation: gtk::Orientation::Vertical,
             set_spacing: 5,
             append: entries_frame = &gtk::Frame {
+                // TODO replace with "head card" gtk::Box
                 set_label_widget = Some(&gtk::Label) {
                     set_label: "Radical",
                     set_css_classes: &["heading", "h4"],
@@ -692,7 +693,8 @@ impl FactoryPrototype for RadPar {
                                 set_column_spacing: 5,
                                 set_halign: gtk::Align::Center,
                                 attach(0, 0, 1, 1): lwa_label = &gtk::Label {
-                                    set_label: "LWA",
+                                    set_label: "Line Width",
+                                    set_halign: gtk::Align::Start,
                                 },
                                 // "next_to" allows to maintain more flexibility for future movements
                                 attach_next_to(Some(&lwa_label), gtk::PositionType::Right, 1, 1): lwa_entry_val =
@@ -715,7 +717,9 @@ impl FactoryPrototype for RadPar {
                                         }
                                     },
                                 attach(0, 1, 1, 1): lrtz_label = &gtk::Label {
-                                    set_label: "Lrtz",
+                                    set_label: "Shape (Lrtz/Gauss)",
+                                    set_halign: gtk::Align::Start,
+                                    set_margin_end: 15,
                                 },
                                 attach(1, 1, 1, 1): lrtz_entry_val = &gtk::SpinButton {
                                     set_adjustment: &RadPar::lrtz_adjustment(),
@@ -735,7 +739,8 @@ impl FactoryPrototype for RadPar {
                                     }
                                 },
                                 attach(0, 2, 1, 1): amount_label = &gtk::Label {
-                                    set_label: "Amount",
+                                    set_label: "Amount (%)",
+                                    set_halign: gtk::Align::Start,
                                 },
                                 attach(1, 2, 1, 1): amount_entry_val = &gtk::SpinButton {
                                     set_adjustment: &RadPar::amount_adjustment(),
@@ -755,7 +760,8 @@ impl FactoryPrototype for RadPar {
                                     }
                                 },
                                 attach(0, 3, 1, 1): dh1_label = &gtk::Label {
-                                    set_label: "dh1",
+                                    set_label: "Center",
+                                    set_halign: gtk::Align::Start,
                                 },
                                 attach(1, 3, 1, 1): dh1_entry_val = &gtk::SpinButton {
                                     set_adjustment: &RadPar::dh1_adjustment(),
