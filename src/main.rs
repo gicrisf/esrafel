@@ -21,6 +21,7 @@ use relm4_components::{
         OpenButtonConfig, OpenButtonModel, OpenButtonParent, OpenButtonSettings,
     },
     open_dialog::{OpenDialogConfig, OpenDialogSettings},
+    save_dialog::{SaveDialogModel, SaveDialogMsg, SaveDialogParent, SaveDialogSettings},
     ParentWindow,
 };
 
@@ -201,6 +202,63 @@ impl OpenButtonParent for AppModel {
     }
 }
 
+// Import parameters
+
+struct ImportParsButtonConfig {}
+
+impl OpenDialogConfig for ImportParsButtonConfig {
+    type Model = AppModel;
+
+    fn open_dialog_config(_model: &Self::Model) -> OpenDialogSettings {
+
+        let filter = gtk::FileFilter::new();
+        // Just JSON files with esrafel head
+        filter.add_pattern("*.esrafel");
+
+        OpenDialogSettings {
+            accept_label: "Open",
+            cancel_label: "Cancel",
+            create_folders: true,
+            is_modal: true,
+            filters: vec![filter],
+        }
+    }
+}
+
+impl OpenButtonConfig for ImportParsButtonConfig {
+    fn open_button_config(_model: &Self::Model) -> OpenButtonSettings {
+        OpenButtonSettings {
+            text: "Import Params.",
+            // TODO move to gresources
+            recently_opened_files: Some(".recent_states"),
+            max_recent_files: 10,
+        }
+    }
+}
+
+// Save pars
+
+struct SaveDialogConfig {}
+impl relm4_components::save_dialog::SaveDialogConfig for SaveDialogConfig {
+    type Model = AppModel;
+
+    fn dialog_config(_model: &Self::Model) -> SaveDialogSettings {
+        SaveDialogSettings {
+            accept_label: "Open",
+            cancel_label: "Cancel",
+            create_folders: true,
+            is_modal: true,
+            filters: Vec::new(),
+        }
+    }
+}
+
+impl SaveDialogParent for AppModel {
+    fn save_msg(path: PathBuf) -> Self::Msg {
+        AppMsg::SaveResponse(path)
+    }
+}
+
 // -- AppModel
 
 // Available simulation methods
@@ -238,6 +296,8 @@ enum AppMsg {
     SpawnToast(String),
     ResetToast,
     SetSimMethod(SimulationMethod),
+    SaveRequest,
+    SaveResponse(PathBuf),
 }
 
 #[derive(relm4::Components)]
@@ -245,6 +305,8 @@ struct AppComponents {
     chart: RelmComponent<ChartModel, AppModel>,
     params: RelmComponent<RadParModel, AppModel>,
     open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
+    import_pars_button: RelmComponent<OpenButtonModel<ImportParsButtonConfig>, AppModel>,
+    save_dialog: RelmComponent<SaveDialogModel<SaveDialogConfig>, AppModel>,
     // status: RelmComponent<StatusModel, AppModel>,
 }
 
@@ -352,6 +414,9 @@ impl AppUpdate for AppModel {
                         "json" => {
                             send!(sender, AppMsg::SpawnToast("JSON format not supported yet!".into()));
                         }  // json case
+                        "esrafel" => {
+                            send!(sender, AppMsg::SpawnToast("State successfully imported!".into()));
+                        }
                         _ => {
                             send!(sender, AppMsg::SpawnToast("How did you even clicked on this file?!".into()));
                         }
@@ -379,6 +444,16 @@ impl AppUpdate for AppModel {
             }
             AppMsg::SetSimMethod(method) => {
                 self.sim_method = Some(method);
+            }
+            AppMsg::SaveRequest => {
+                components
+                    .save_dialog
+                    // TODO get name from dialog
+                    .send(SaveDialogMsg::SaveAs(".esrafel".into()))
+                    .unwrap();
+            }
+            AppMsg::SaveResponse(path) => {
+                println!("File would have been saved at {:?}", path);
             }
         }
         true
@@ -455,6 +530,36 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                         // TODO remove this request
                                         // set_width_request: 715,
                                         set_child = Some(&gtk::Box) {
+                                            append: open_params = &gtk::Box {
+                                                set_orientation: gtk::Orientation::Horizontal,
+                                                set_spacing: 5,
+                                                append = &gtk::Box {
+                                                    set_orientation: gtk::Orientation::Horizontal,
+                                                    set_spacing: 5,
+                                                    set_margin_start: 5,
+                                                    set_margin_end: 5,
+                                                    set_margin_top: 5,
+                                                    set_margin_bottom: 5,
+                                                    append: components.import_pars_button.root_widget(),
+                                                },
+                                                append = &gtk::Box {
+                                                    set_orientation: gtk::Orientation::Horizontal,
+                                                    set_spacing: 5,
+                                                    set_margin_start: 5,
+                                                    set_margin_end: 5,
+                                                    set_margin_top: 5,
+                                                    set_margin_bottom: 5,
+                                                    append = &gtk::Label {
+                                                        set_text: "Export param."
+                                                    },
+                                                    append = &gtk::Button {
+                                                        set_icon_name: "document-save-symbolic",
+                                                        connect_clicked(sender) => move |_| {
+                                                            send!(sender, AppMsg::SaveRequest);
+                                                        },
+                                                    },
+                                                },
+                                            },
                                             append: sweep_entry = &gtk::Box {
                                                 set_orientation: gtk::Orientation::Horizontal,
                                                 set_spacing: 5,
@@ -463,7 +568,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                 set_margin_top: 5,
                                                 set_margin_bottom: 5,
                                                 // set_homogeneous: true,
-                                                append: &gtk::Label::new(Some("Sweep")),
+                                                append = &gtk::Label {
+                                                    set_text: "Sweep",
+                                                },
                                                 append: sweep_spin = &gtk::SpinButton {
                                                     set_adjustment: &gtk::Adjustment::new(
                                                         model.sweep,  // value
