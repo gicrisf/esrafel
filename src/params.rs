@@ -617,7 +617,6 @@ impl FactoryPrototype for RadPar {
         gtk::Box {
             set_orientation: gtk::Orientation::Vertical,
             set_spacing: 5,
-            // TODO make entry for name
             append: entries_frame = &gtk::Frame {
                 set_label_widget = Some(&gtk::Label) {
                     set_label: "Radical",
@@ -640,8 +639,8 @@ impl FactoryPrototype for RadPar {
                         set_margin_bottom: 15,
                         // set_halign: gtk::Align::Center,
 
-                        // TODO entry function
-                        // Until that moment, we don't need this button either
+                        // TODO entry function to change rad name
+                        // Until that moment, we don't need this button
                         //
                         // append: counter_button = &gtk::Button {
                         //   set_label: watch!(&self.value.to_string()),
@@ -650,7 +649,7 @@ impl FactoryPrototype for RadPar {
                         //    }
                         // },
 
-                        // Don't need this button
+                        // Don't need this button either
                         //
                         // append: ins_above_button = &gtk::Button {
                         //    set_label: "Add above",
@@ -659,26 +658,20 @@ impl FactoryPrototype for RadPar {
                         //    }
                         // },
 
-                        append: ins_below_button = &gtk::Button {
-                            set_label: "Add below",
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::InsertAfter(key.downgrade()));
-                            }
-                        },
-                        append: add_new_nuc = &gtk::Button {
-                            set_label: "Add Nucleus",
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::AddNuc(key.downgrade(), "New Nucleus".into()));
-                            }
-                        },
-                        append: remove_last_nuc = &gtk::Button {
-                            set_label: "Remove last Nuc",
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
-                            }
-                        },
+                        // Dont' need this either
+                        // It may be useful in notebook though
+                        //
+                        // append: ins_below_button = &gtk::Button {
+                        //    set_label: "Add below",
+                        //    connect_clicked(sender, key) => move |_| {
+                        //        send!(sender, RadParMsg::InsertAfter(key.downgrade()));
+                        //    }
+                        // },
+
                         append: remove_button = &gtk::Button {
-                            set_label: "Remove",
+                            // set_label: "Remove",
+                            set_icon_name: "user-trash-symbolic",
+                            // set_css_classes: &["flat"],
                             // TODO Pop up a dialog with a really destructive button
                             // set_css_classes: &["destructive-action"],
                             connect_clicked(sender, key) => move |_| {
@@ -691,94 +684,118 @@ impl FactoryPrototype for RadPar {
                         set_spacing: 5,
                         set_homogeneous: true,
 
-                        append = &gtk::Grid {
-                            set_row_spacing: 5,
-                            set_column_spacing: 5,
-                            set_halign: gtk::Align::Center,
-                            attach(0, 0, 1, 1): lwa_label = &gtk::Label {
-                                set_label: "LWA",
-                            },
-                            // "next_to" allows to maintain more flexibility for future movements
-                            attach_next_to(Some(&lwa_label), gtk::PositionType::Right, 1, 1): lwa_entry_val =
-                                &gtk::SpinButton {
-                                    set_adjustment: &RadPar::lwa_adjustment(),
+                        append: left_box = &gtk::Box {
+                            set_orientation: gtk::Orientation::Vertical,
+                            set_spacing: 5,
+                            append = &gtk::Grid {
+                                set_row_spacing: 5,
+                                set_column_spacing: 5,
+                                set_halign: gtk::Align::Center,
+                                attach(0, 0, 1, 1): lwa_label = &gtk::Label {
+                                    set_label: "LWA",
+                                },
+                                // "next_to" allows to maintain more flexibility for future movements
+                                attach_next_to(Some(&lwa_label), gtk::PositionType::Right, 1, 1): lwa_entry_val =
+                                    &gtk::SpinButton {
+                                        set_adjustment: &RadPar::lwa_adjustment(),
+                                        set_digits: 1,
+                                        set_value: watch!(self.lwa_val),
+                                        connect_value_changed(sender, key) => move |val| {
+                                            send!(sender, RadParMsg::SetLwaVal(key.downgrade(), val.value()));
+                                        }
+                                    },
+                                attach_next_to(Some(&lwa_entry_val), gtk::PositionType::Right, 1, 1): lwa_entry_var =
+                                    &gtk::SpinButton {
+                                        set_adjustment: &RadPar::var_adjustment(),
+                                        set_digits: 1,
+                                        set_climb_rate: 0.5,
+                                        set_value: watch!(self.lwa_var),
+                                        connect_value_changed(sender, key) => move |val| {
+                                            send!(sender, RadParMsg::SetLwaVar(key.downgrade(), val.value()));
+                                        }
+                                    },
+                                attach(0, 1, 1, 1): lrtz_label = &gtk::Label {
+                                    set_label: "Lrtz",
+                                },
+                                attach(1, 1, 1, 1): lrtz_entry_val = &gtk::SpinButton {
+                                    set_adjustment: &RadPar::lrtz_adjustment(),
                                     set_digits: 1,
-                                    set_value: watch!(self.lwa_val),
+                                    set_value: watch!(self.lrtz_val),
                                     connect_value_changed(sender, key) => move |val| {
-                                        send!(sender, RadParMsg::SetLwaVal(key.downgrade(), val.value()));
+                                        send!(sender, RadParMsg::SetLrtzVal(key.downgrade(), val.value()));
                                     }
                                 },
-                            attach_next_to(Some(&lwa_entry_val), gtk::PositionType::Right, 1, 1): lwa_entry_var =
-                                &gtk::SpinButton {
+                                attach(2, 1, 1, 1): lrtz_entry_var = &gtk::SpinButton {
                                     set_adjustment: &RadPar::var_adjustment(),
                                     set_digits: 1,
+                                    set_value: watch!(self.lrtz_var),
                                     set_climb_rate: 0.5,
-                                    set_value: watch!(self.lwa_var),
                                     connect_value_changed(sender, key) => move |val| {
-                                        send!(sender, RadParMsg::SetLwaVar(key.downgrade(), val.value()));
+                                        send!(sender, RadParMsg::SetLrtzVar(key.downgrade(), val.value()));
                                     }
                                 },
-                            attach(0, 1, 1, 1): lrtz_label = &gtk::Label {
-                                set_label: "Lrtz",
+                                attach(0, 2, 1, 1): amount_label = &gtk::Label {
+                                    set_label: "Amount",
+                                },
+                                attach(1, 2, 1, 1): amount_entry_val = &gtk::SpinButton {
+                                    set_adjustment: &RadPar::amount_adjustment(),
+                                    set_digits: 1,
+                                    set_value: watch!(self.amount_val),
+                                    connect_value_changed(sender, key) => move |val| {
+                                        send!(sender, RadParMsg::SetAmountVal(key.downgrade(), val.value()));
+                                    }
+                                },
+                                attach(2, 2, 1, 1): amount_entry_var = &gtk::SpinButton {
+                                    set_adjustment: &RadPar::var_adjustment(),
+                                    set_digits: 1,
+                                    set_value: watch!(self.amount_var),
+                                    set_climb_rate: 0.5,
+                                    connect_value_changed(sender, key) => move |val| {
+                                        send!(sender, RadParMsg::SetAmountVar(key.downgrade(), val.value()));
+                                    }
+                                },
+                                attach(0, 3, 1, 1): dh1_label = &gtk::Label {
+                                    set_label: "dh1",
+                                },
+                                attach(1, 3, 1, 1): dh1_entry_val = &gtk::SpinButton {
+                                    set_adjustment: &RadPar::dh1_adjustment(),
+                                    set_digits: 1,
+                                    set_value: watch!(self.dh1_val),
+                                    connect_value_changed(sender, key) => move |val| {
+                                        send!(sender, RadParMsg::SetDh1Val(key.downgrade(), val.value()));
+                                    }
+                                },
+                                attach(2, 3, 1, 1): dh1_entry_var = &gtk::SpinButton {
+                                    set_adjustment: &RadPar::var_adjustment(),
+                                    set_digits: 1,
+                                    set_value: watch!(self.dh1_var),
+                                    set_climb_rate: 0.5,
+                                    connect_value_changed(sender, key) => move |val| {
+                                        send!(sender, RadParMsg::SetDh1Var(key.downgrade(), val.value()));
+                                    }
+                                },
+                            },  // Grid
+
+                            append: nuc_controls_buttonbox = &gtk::Box {
+                                set_orientation: gtk::Orientation::Vertical,
+                                set_margin_top: 50,
+                                set_spacing: 5,
+                                set_halign: gtk::Align::Center,
+                                append: add_new_nuc = &gtk::Button {
+                                    set_label: "Add Nucleus",
+                                    connect_clicked(sender, key) => move |_| {
+                                        send!(sender, RadParMsg::AddNuc(key.downgrade(), "New Nucleus".into()));
+                                    }
+                                },
+                                append: remove_last_nuc = &gtk::Button {
+                                    set_label: "Remove last Nuc",
+                                    connect_clicked(sender, key) => move |_| {
+                                        send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
+                                    }
+                                },
                             },
-                            attach(1, 1, 1, 1): lrtz_entry_val = &gtk::SpinButton {
-                                set_adjustment: &RadPar::lrtz_adjustment(),
-                                set_digits: 1,
-                                set_value: watch!(self.lrtz_val),
-                                connect_value_changed(sender, key) => move |val| {
-                                    send!(sender, RadParMsg::SetLrtzVal(key.downgrade(), val.value()));
-                                }
-                            },
-                            attach(2, 1, 1, 1): lrtz_entry_var = &gtk::SpinButton {
-                                set_adjustment: &RadPar::var_adjustment(),
-                                set_digits: 1,
-                                set_value: watch!(self.lrtz_var),
-                                set_climb_rate: 0.5,
-                                connect_value_changed(sender, key) => move |val| {
-                                    send!(sender, RadParMsg::SetLrtzVar(key.downgrade(), val.value()));
-                                }
-                            },
-                            attach(0, 2, 1, 1): amount_label = &gtk::Label {
-                                set_label: "Amount",
-                            },
-                            attach(1, 2, 1, 1): amount_entry_val = &gtk::SpinButton {
-                                set_adjustment: &RadPar::amount_adjustment(),
-                                set_digits: 1,
-                                set_value: watch!(self.amount_val),
-                                connect_value_changed(sender, key) => move |val| {
-                                    send!(sender, RadParMsg::SetAmountVal(key.downgrade(), val.value()));
-                                }
-                            },
-                            attach(2, 2, 1, 1): amount_entry_var = &gtk::SpinButton {
-                                set_adjustment: &RadPar::var_adjustment(),
-                                set_digits: 1,
-                                set_value: watch!(self.amount_var),
-                                set_climb_rate: 0.5,
-                                connect_value_changed(sender, key) => move |val| {
-                                    send!(sender, RadParMsg::SetAmountVar(key.downgrade(), val.value()));
-                                }
-                            },
-                            attach(0, 3, 1, 1): dh1_label = &gtk::Label {
-                                set_label: "dh1",
-                            },
-                            attach(1, 3, 1, 1): dh1_entry_val = &gtk::SpinButton {
-                                set_adjustment: &RadPar::dh1_adjustment(),
-                                set_digits: 1,
-                                set_value: watch!(self.dh1_val),
-                                connect_value_changed(sender, key) => move |val| {
-                                    send!(sender, RadParMsg::SetDh1Val(key.downgrade(), val.value()));
-                                }
-                            },
-                            attach(2, 3, 1, 1): dh1_entry_var = &gtk::SpinButton {
-                                set_adjustment: &RadPar::var_adjustment(),
-                                set_digits: 1,
-                                set_value: watch!(self.dh1_var),
-                                set_climb_rate: 0.5,
-                                connect_value_changed(sender, key) => move |val| {
-                                    send!(sender, RadParMsg::SetDh1Var(key.downgrade(), val.value()));
-                                }
-                            },
-                        },  // Grid
+                        },
+
                         append: nuc_factory_box = &gtk::Box {
                             set_orientation: gtk::Orientation::Horizontal,
                             set_spacing: 5,
@@ -844,12 +861,13 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
             .margin_top(5)
             .margin_start(5)
             .margin_bottom(5)
-            .halign(gtk::Align::Center)
+            .halign(gtk::Align::End)
             .spacing(5)
             .build();
 
         // Append new radical to the vector
         let add = gtk::Button::with_label("Add Rad");
+        add.set_halign(gtk::Align::Center);
 
         // Not added to the UI
         let remove = gtk::Button::with_label("Remove Rad");
@@ -857,14 +875,14 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
 
         // Convert UI data in simulator parameters
         let update = gtk::Button::with_label("Update Simulator");
-        update.set_css_classes(&["suggested-action"]);
+        // update.set_css_classes(&["suggested-action"]);
 
         // TODO cancel function
         // let cancel = gtk::Button::with_label("Cancel");
 
         main_box.append(&gen_box);
 
-        button_box.append(&add);
+        main_box.append(&add);
 
         // This button removes the last radical of the vector
         // Functional but suppressed

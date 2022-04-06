@@ -418,6 +418,8 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                             append: sweep_entry = &gtk::Box {
                                                 set_orientation: gtk::Orientation::Horizontal,
                                                 set_spacing: 5,
+                                                set_margin_top: 5,
+                                                set_margin_bottom: 5,
                                                 set_homogeneous: true,
                                                 append: &gtk::Label::new(Some("Sweep")),
                                                 append: sweep_spin = &gtk::SpinButton {
@@ -437,6 +439,8 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                             append: points_entry = &gtk::Box {
                                                 set_orientation: gtk::Orientation::Horizontal,
                                                 set_spacing: 5,
+                                                set_margin_top: 5,
+                                                set_margin_bottom: 5,
                                                 set_homogeneous: true,
                                                 append: &gtk::Label::new(Some("Points")),
                                                 append: points_spin = &gtk::SpinButton {
