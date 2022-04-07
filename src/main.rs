@@ -594,8 +594,6 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                     set_spacing: 5,
                                     append = &gtk::Frame {
                                         // set_label: Some("General"),
-                                        // TODO remove this request
-                                        // set_width_request: 715,
                                         set_child = Some(&gtk::Box) {
                                             append: open_params = &gtk::Box {
                                                 set_orientation: gtk::Orientation::Horizontal,
@@ -698,7 +696,8 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                     set_child: Some(components.params.root_widget()),
                                 },
                             } -> params_page: ViewStackPage {
-                                set_icon_name: Some("document-print-symbolic"),
+                                // set_icon_name: Some("document-print-symbolic"),
+                                set_icon_name: Some("applications-engineering-symbolic"),
                                 set_badge_number: watch!(model.rads.len() as u32),
                             },
                             add_titled(Some("Plot"), "Plot") = &gtk::Box {
@@ -736,7 +735,8 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                 },
 
                             } -> plot_page: ViewStackPage {
-                                set_icon_name: Some("media-playback-start-symbolic"),
+                                // set_icon_name: Some("media-playback-start-symbolic"),
+                                set_icon_name: Some("utilities-system-monitor-symbolic"),
                                 set_needs_attention: watch!(model.montecarlo),
                             },
                         },

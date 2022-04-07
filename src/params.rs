@@ -665,15 +665,10 @@ impl FactoryPrototype for RadPar {
             set_orientation: gtk::Orientation::Vertical,
             set_spacing: 5,
             append: entries_frame = &gtk::Frame {
-                // TODO replace with "head card" gtk::Box
-                set_label_widget = Some(&gtk::Label) {
-                    set_label: "Radical",
-                    set_css_classes: &["heading", "h4"],
-                },
-                set_margin_top: 5,
-                set_margin_bottom: 5,
-                set_margin_start: 5,
-                set_margin_end: 5,
+                // set_margin_top: 5,
+                // set_margin_bottom: 5,
+                // set_margin_start: 5,
+                // set_margin_end: 5,
                 set_child = Some(&gtk::Box) {
                     set_margin_top: 5,
                     set_margin_bottom: 5,
@@ -681,21 +676,12 @@ impl FactoryPrototype for RadPar {
                     set_margin_end: 5,
                     set_orientation: gtk::Orientation::Vertical,
                     set_spacing: 5,
-                    append: par_general_box = &gtk::Box {
+                    
+                    append: par_head = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
                         set_spacing: 5,
                         set_margin_bottom: 15,
                         // set_halign: gtk::Align::Center,
-
-                        // TODO entry function to change rad name
-                        // Until that moment, we don't need this button
-                        //
-                        // append: counter_button = &gtk::Button {
-                        //   set_label: watch!(&self.value.to_string()),
-                        //    connect_clicked(sender, key) => move |_| {
-                        //        send!(sender, RadParMsg::CountAt(key.downgrade()));
-                        //    }
-                        // },
 
                         // Don't need this button either
                         //
@@ -715,17 +701,6 @@ impl FactoryPrototype for RadPar {
                         //        send!(sender, RadParMsg::InsertAfter(key.downgrade()));
                         //    }
                         // },
-
-                        append: remove_button = &gtk::Button {
-                            // set_label: "Remove",
-                            set_icon_name: "user-trash-symbolic",
-                            // set_css_classes: &["flat"],
-                            // TODO Pop up a dialog with a really destructive button
-                            // set_css_classes: &["destructive-action"],
-                            connect_clicked(sender, key) => move |_| {
-                                send!(sender, RadParMsg::RemoveAt(key.downgrade()));
-                            }
-                        },
                     },
                     append: rad_params_box = &gtk::Box {
                         set_orientation: gtk::Orientation::Horizontal,
@@ -735,6 +710,37 @@ impl FactoryPrototype for RadPar {
                         append: left_box = &gtk::Box {
                             set_orientation: gtk::Orientation::Vertical,
                             set_spacing: 5,
+                            append: left_head = &gtk::Box {
+                                set_orientation: gtk::Orientation::Horizontal,
+                                set_halign: gtk::Align::Center,
+                                set_spacing: 5,
+                                append: rad_name_label = &gtk::Label {
+                                    set_label: "Radical",
+                                    set_css_classes: &["heading", "h4"],
+                                },
+
+                                // TODO entry function to change rad name
+                                // Until that moment, we don't need this button
+                                //
+                                // append: counter_button = &gtk::Button {
+                                //   set_label: watch!(&self.value.to_string()),
+                                //    connect_clicked(sender, key) => move |_| {
+                                //        send!(sender, RadParMsg::CountAt(key.downgrade()));
+                                //    }
+                                // },
+
+                                append: remove_button = &gtk::Button {
+                                    // set_label: "Remove",
+                                    set_icon_name: "user-trash-symbolic",
+                                    // set_css_classes: &["flat"],
+                                    // TODO Pop up a dialog with a really destructive button
+                                    // set_css_classes: &["destructive-action"],
+                                    connect_clicked(sender, key) => move |_| {
+                                        send!(sender, RadParMsg::RemoveAt(key.downgrade()));
+                                    }
+                                },
+
+                            },
                             append = &adw::Bin {
                                 set_child = Some(&gtk::Grid) {
                                     set_row_spacing: 5,
@@ -831,30 +837,36 @@ impl FactoryPrototype for RadPar {
                                 },  // Grid
                             },
 
-
-                            append: nuc_controls_buttonbox = &gtk::Box {
-                                set_orientation: gtk::Orientation::Vertical,
-                                set_margin_top: 50,
-                                set_spacing: 5,
-                                set_halign: gtk::Align::Center,
-                                append: add_new_nuc = &gtk::Button {
-                                    set_label: "Add Nucleus",
-                                    connect_clicked(sender, key) => move |_| {
-                                        send!(sender, RadParMsg::AddNuc(key.downgrade(), "New Nucleus".into()));
-                                    }
-                                },
-                                append: remove_last_nuc = &gtk::Button {
-                                    set_label: "Remove last Nuc",
-                                    connect_clicked(sender, key) => move |_| {
-                                        send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
-                                    }
-                                },
-                            },
                         },
 
-                        append: nuc_factory_box = &gtk::Box {
-                            set_orientation: gtk::Orientation::Horizontal,
+                        append: right_box = &gtk::Box {
+                            set_orientation: gtk::Orientation::Vertical,
                             set_spacing: 5,
+                            append: right_head = &gtk::Box {
+                                set_orientation: gtk::Orientation::Horizontal,
+                                set_halign: gtk::Align::Center,
+                                set_spacing: 5,
+
+                                append: nuc_controls_buttonbox = &gtk::Box {
+                                    set_orientation: gtk::Orientation::Horizontal,
+                                    set_spacing: 5,
+                                    set_halign: gtk::Align::Center,
+                                    append: add_new_nuc = &gtk::Button {
+                                        set_label: "Add Nucleus",
+                                        // set_icon_name: "insert-object-symbolic",
+                                        connect_clicked(sender, key) => move |_| {
+                                            send!(sender, RadParMsg::AddNuc(key.downgrade(), "New Nucleus".into()));
+                                        }
+                                    },
+                                    append: remove_last_nuc = &gtk::Button {
+                                        set_label: "Remove last Nuc",
+                                        // set_icon_name: "list-remove-symbolic",
+                                        connect_clicked(sender, key) => move |_| {
+                                            send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
+                                        }
+                                    },
+                                },
+                            },
                             append: nuc_entries_frame = &gtk::Frame {
                                 set_label_widget = Some(&gtk::Label) {
                                     set_label: "Nuclei",
@@ -869,6 +881,12 @@ impl FactoryPrototype for RadPar {
                                     set_spacing: 5,
                                     append: self.nuc_factory.root_widget(),
                                 }
+                            },
+                            append: right_footer = &gtk::Box {
+                                set_orientation: gtk::Orientation::Horizontal,
+                                set_halign: gtk::Align::Center,
+                                set_spacing: 5,
+                                
                             }
                         }
                     },
