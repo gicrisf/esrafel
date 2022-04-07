@@ -1,9 +1,10 @@
 use rand::{thread_rng, Rng};
+use serde::{Serialize, Deserialize};
 
 // TODO use better var names
 // Temporarily maintaining legacy name to make easier comparison
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Param {
     pub val: f64,  // Value; starts with 0.0
     pub var: f64,  // Variation; starts with: 0.0
@@ -27,7 +28,7 @@ impl Param {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Nucleus {
     pub spin: Param,  // Nuclear spin;
     pub hpf: Param,  // Hyperfine constant;
@@ -44,7 +45,7 @@ impl Nucleus {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Radical {
     pub lwa: Param,  // Line width A
     // pub lwb: Param,

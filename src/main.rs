@@ -27,7 +27,9 @@ use relm4_components::{
 
 use std::path::PathBuf;
 use std::fs::File;
-use std::io::Read;
+use std::io::{Read, Write};
+
+use serde::{Serialize, Deserialize};
 
 mod drawers;
 mod esr_io;
@@ -244,7 +246,7 @@ impl relm4_components::save_dialog::SaveDialogConfig for SaveDialogConfig {
 
     fn dialog_config(_model: &Self::Model) -> SaveDialogSettings {
         SaveDialogSettings {
-            accept_label: "Open",
+            accept_label: "Save",
             cancel_label: "Cancel",
             create_folders: true,
             is_modal: true,
@@ -264,13 +266,14 @@ impl SaveDialogParent for AppModel {
 // Available simulation methods
 // This will make it easier further extensions of thee backend
 
+#[derive(Serialize, Deserialize)]
 enum SimulationMethod {
     MC199,
     // Dynamic1999
     // ...
 }
 
-#[derive(Default)]
+#[derive(Default, Serialize, Deserialize)]
 struct AppModel {
     empirical: Option<Vec<f64>>,
     rads: Vec<Radical>,
@@ -279,9 +282,10 @@ struct AppModel {
     sigma: f64,
     iters: usize,
     montecarlo: bool,
-    last_toast: Option<adw::Toast>,
     log: Vec<String>,
     sim_method: Option<SimulationMethod>,
+    #[serde(skip)]
+    last_toast: Option<adw::Toast>,
 }
 
 enum AppMsg {
@@ -448,12 +452,35 @@ impl AppUpdate for AppModel {
             AppMsg::SaveRequest => {
                 components
                     .save_dialog
-                    // TODO get name from dialog
                     .send(SaveDialogMsg::SaveAs(".esrafel".into()))
                     .unwrap();
             }
             AppMsg::SaveResponse(path) => {
-                println!("File would have been saved at {:?}", path);
+                // Serialize model
+                let data = serde_json::to_string(&self).unwrap();
+
+                // Write to file
+                match File::create(path.clone()) {
+                    Ok(mut file) => {
+                        match write!(file, "{}", &data) {
+                            Ok(_) => {
+                                send!(sender, AppMsg::SpawnToast(
+                                    format!("File successfully saved into {:?}", &path).into()
+                                ));
+                            }
+                            Err(e) => {
+                                let err_string = format!("Unable to create file. Error: {}", e);
+                                send!(sender, AppMsg::SpawnToast(err_string.into()));
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        let err_string = format!("Unable to create file. Error: {}", e);
+                        send!(sender, AppMsg::SpawnToast(err_string.into()));
+                    }
+                };
+
+                // Done
             }
         }
         true
@@ -549,11 +576,10 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                     set_margin_end: 5,
                                                     set_margin_top: 5,
                                                     set_margin_bottom: 5,
-                                                    append = &gtk::Label {
-                                                        set_text: "Export param."
-                                                    },
+
                                                     append = &gtk::Button {
-                                                        set_icon_name: "document-save-symbolic",
+                                                        set_label: "Export Params.",
+                                                        // set_icon_name: "document-save-symbolic",
                                                         connect_clicked(sender) => move |_| {
                                                             send!(sender, AppMsg::SaveRequest);
                                                         },
