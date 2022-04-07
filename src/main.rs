@@ -288,6 +288,29 @@ struct AppModel {
     last_toast: Option<adw::Toast>,
 }
 
+impl AppModel {
+    fn default() -> Self {
+        AppModel {
+            empirical: None,
+            // TODO start without radicals and show welcome screen
+            rads: vec![Radical::var_probe()],
+            points: 1024,
+            sweep: 100.0,
+            sigma: 100000000000000000000.0,  //1e+20
+            iters: 0,
+            montecarlo: false,
+            last_toast: None,
+            log: Vec::new(),
+            sim_method: Some(SimulationMethod::MC199),
+        }
+    }
+
+    fn safe_import_from_deserialized(mut deserialized: AppModel) -> Self {
+        deserialized.last_toast = None;
+        deserialized
+    }
+}
+
 enum AppMsg {
     IterMontecarlo,
     Redraw,
@@ -325,10 +348,8 @@ impl AppUpdate for AppModel {
         match msg {
             AppMsg::UpdateRads(new_rads) => {
                 self.rads = new_rads;
-                // TODO Remove this, DEBUGGING ONLY
-                println!("{:?}", self.rads);
-
-                send!(sender, AppMsg::SpawnToast("Updated".into()));
+                let action_string = format!("Updated! You are working with {} radicals now.", self.rads.len());
+                send!(sender, AppMsg::SpawnToast(action_string));
             }
             AppMsg::RefreshPanel => {
                 components.params.send(RadParMsg::Import(self.rads.clone()))
@@ -383,6 +404,7 @@ impl AppUpdate for AppModel {
 
                     match ext_as_str {
                         "txt" => {
+                            // TODO nest this block into the next one
                             let f: Option<File>;
 
                             match File::open(path) {
@@ -419,7 +441,42 @@ impl AppUpdate for AppModel {
                             send!(sender, AppMsg::SpawnToast("JSON format not supported yet!".into()));
                         }  // json case
                         "esrafel" => {
-                            send!(sender, AppMsg::SpawnToast("State successfully imported!".into()));
+                            // Show this if loading succeeds
+                            let success_string = format!("Successfully loaded state from {:?}!", &path).into();
+
+                            match File::open(path) {
+                                Ok(mut file) => {
+                                    match file.read_to_string(&mut data) {
+                                        Ok(_) => {
+                                            // Now you have a string from file, so deserialize it
+                                            let loaded_model: AppModel = match serde_json::from_str(&data) {
+                                                Ok(m) => { m }
+                                                Err(e) => {
+                                                    let err_string = format!("Unable to load this state. Error: {}", e);
+                                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                                    AppModel::default()
+                                                }
+                                            };
+
+                                            // TODO I don't like dereferencing this way, I should check field by field and updating the GUI in the same time
+                                            *self = AppModel::safe_import_from_deserialized(loaded_model);
+
+                                            send!(sender, AppMsg::SpawnToast(success_string));
+                                        },
+                                        Err(e) => {
+                                            let err_string = format!("Unable to read string in this file. Error: {}", e);
+                                            send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                        }
+                                    }
+
+                                    send!(sender, AppMsg::SpawnToast("State successfully imported!".into()));
+                                }
+                                Err(e) => {
+                                    let err_string = format!("Unable to load state. Error: {}", e);
+                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                }
+                            }
+                            // end
                         }
                         _ => {
                             send!(sender, AppMsg::SpawnToast("How did you even clicked on this file?!".into()));
@@ -457,25 +514,31 @@ impl AppUpdate for AppModel {
             }
             AppMsg::SaveResponse(path) => {
                 // Serialize model
-                let data = serde_json::to_string(&self).unwrap();
-
-                // Write to file
-                match File::create(path.clone()) {
-                    Ok(mut file) => {
-                        match write!(file, "{}", &data) {
-                            Ok(_) => {
-                                send!(sender, AppMsg::SpawnToast(
-                                    format!("File successfully saved into {:?}", &path).into()
-                                ));
+                match serde_json::to_string(&self) {
+                    Ok(data) => {
+                        // Write to file
+                        match File::create(path.clone()) {
+                            Ok(mut file) => {
+                                match write!(file, "{}", &data) {
+                                    Ok(_) => {
+                                        send!(sender, AppMsg::SpawnToast(
+                                            format!("File successfully saved into {:?}", &path).into()
+                                        ));
+                                    }
+                                    Err(e) => {
+                                        let err_string = format!("Unable to create file. Error: {}", e);
+                                        send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                    }
+                                }
                             }
                             Err(e) => {
                                 let err_string = format!("Unable to create file. Error: {}", e);
                                 send!(sender, AppMsg::SpawnToast(err_string.into()));
                             }
-                        }
+                        };
                     }
                     Err(e) => {
-                        let err_string = format!("Unable to create file. Error: {}", e);
+                        let err_string = format!("Failed serializing current state. Error: {}", e);
                         send!(sender, AppMsg::SpawnToast(err_string.into()));
                     }
                 };
@@ -767,19 +830,7 @@ impl ParentWindow for AppWidgets {
 // -- MAIN
 
 fn main() {
-    let model = AppModel {
-        empirical: None,
-        // TODO start without radicals and show welcome screen
-        rads: vec![Radical::var_probe()],
-        points: 1024,
-        sweep: 100.0,
-        sigma: 100000000000000000000.0,  //1e+20
-        iters: 0,
-        montecarlo: false,
-        last_toast: None,
-        log: Vec::new(),
-        sim_method: Some(SimulationMethod::MC199),
-    };
+    let model = AppModel::default();
     let app = RelmApp::new(model);
     app.run();
 } 
