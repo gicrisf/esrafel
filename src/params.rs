@@ -525,8 +525,6 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 self.pars.pop_back();
             }
             RadParMsg::Update => {
-                // UpdateMain
-                println!("Update Pars in main model");
                 let mut new_rads: Vec<Radical> = Vec::new();
                 for rad_par in self.pars.iter() {
                     new_rads.push(rad_par.get_as_rad());
@@ -897,6 +895,7 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
     fn init_view(_model: &RadParModel, _components: &(), sender: Sender<RadParMsg>) -> Self {
         let main_box = gtk::Box::builder()
             .orientation(gtk::Orientation::Vertical)
+            .valign(gtk::Align::Center)
             .margin_end(5)
             .margin_top(5)
             .margin_start(5)

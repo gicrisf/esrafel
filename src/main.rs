@@ -288,29 +288,6 @@ struct AppModel {
     last_toast: Option<adw::Toast>,
 }
 
-impl AppModel {
-    fn default() -> Self {
-        AppModel {
-            empirical: None,
-            // TODO start without radicals and show welcome screen
-            rads: vec![Radical::var_probe()],
-            points: 1024,
-            sweep: 100.0,
-            sigma: 100000000000000000000.0,  //1e+20
-            iters: 0,
-            montecarlo: false,
-            last_toast: None,
-            log: Vec::new(),
-            sim_method: Some(SimulationMethod::MC199),
-        }
-    }
-
-    fn safe_import_from_deserialized(mut deserialized: AppModel) -> Self {
-        deserialized.last_toast = None;
-        deserialized
-    }
-}
-
 enum AppMsg {
     IterMontecarlo,
     Redraw,
@@ -459,7 +436,7 @@ impl AppUpdate for AppModel {
                                             };
 
                                             // TODO I don't like dereferencing this way, I should check field by field and updating the GUI in the same time
-                                            *self = AppModel::safe_import_from_deserialized(loaded_model);
+                                            *self = loaded_model;
 
                                             send!(sender, AppMsg::SpawnToast(success_string));
                                         },
@@ -830,7 +807,19 @@ impl ParentWindow for AppWidgets {
 // -- MAIN
 
 fn main() {
-    let model = AppModel::default();
+    let model = AppModel {
+        empirical: None,
+        // TODO start without radicals and show welcome screen
+        rads: vec![Radical::var_probe()],
+        points: 1024,
+        sweep: 100.0,
+        sigma: 100000000000000000000.0,  //1e+20
+        iters: 0,
+        montecarlo: false,
+        last_toast: None,
+        log: Vec::new(),
+        sim_method: Some(SimulationMethod::MC199),
+    };
     let app = RelmApp::new(model);
     app.run();
 } 
