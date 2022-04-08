@@ -1,7 +1,8 @@
 use adw::prelude::BinExt;
 
 use gtk::{
-    prelude::{BoxExt, FrameExt, ButtonExt, OrientableExt, ListModelExt, EditableExt, StaticType, ObjectExt, WidgetExt, GridExt},
+    prelude::{BoxExt, FrameExt, ButtonExt, OrientableExt, ListModelExt,
+              EditableExt, StaticType, ObjectExt, WidgetExt, GridExt},
     gio, glib,
     };
 
@@ -203,11 +204,13 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                 let eqs_label = gtk::Label::new(Some("Eqs"));
 
                 let eqs_spinbtn = gtk::SpinButton::builder()
-                    .wrap(true)
+                    // .wrap(true)
                     .adjustment(&Self::eqs_adjustment())
                     .climb_rate(0.5)
                     .digits(0)
-                    .orientation(gtk::Orientation::Vertical)
+                    .width_chars(1)
+                    // .orientation(gtk::Orientation::Vertical)
+                    .orientation(gtk::Orientation::Horizontal)
                     .build();
 
                 nuc_grid.attach(&eqs_label, 0, 0, 1, 1);
@@ -223,11 +226,13 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                 let spin_label = gtk::Label::new(Some("Spin"));
 
                 let spinval_spinbtn = gtk::SpinButton::builder()
-                    .wrap(true)
+                    // .wrap(true)
                     .adjustment(&Self::spin_adjustment())
                     .climb_rate(0.5)
                     .digits(1)
-                    .orientation(gtk::Orientation::Vertical)
+                    .width_chars(1)
+                    // .orientation(gtk::Orientation::Vertical)
+                    .orientation(gtk::Orientation::Horizontal)
                     .build();
 
                 nuc_grid.attach(&spin_label, 1, 0, 1, 1);
@@ -250,11 +255,13 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
                 let hpfvar_label = gtk::Label::new(Some("Hpf var"));
 
                 let hpfval_spinbtn = gtk::SpinButton::builder()
-                    .wrap(true)
+                    // .wrap(true)
                     .adjustment(&Self::hpf_adjustment())
                     .climb_rate(0.1)
                     .digits(1)
-                    .orientation(gtk::Orientation::Vertical)
+                    .width_chars(1)
+                    // .orientation(gtk::Orientation::Vertical)
+                    .orientation(gtk::Orientation::Horizontal)
                     .build();
 
                 nuc_grid.attach(&hpfval_label, 2, 0, 1, 1);
@@ -262,11 +269,13 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
 
 
                 let hpfvar_spinbtn = gtk::SpinButton::builder()
-                    .wrap(true)
+                    // .wrap(true)
                     .adjustment(&Self::var_adjustment())
                     .climb_rate(0.1)
                     .digits(1)
-                    .orientation(gtk::Orientation::Vertical)
+                    .width_chars(1)
+                    // .orientation(gtk::Orientation::Vertical)
+                    .orientation(gtk::Orientation::Horizontal)
                     .build();
 
                 nuc_grid.attach(&hpfvar_label, 3, 0, 1, 1);
@@ -474,6 +483,7 @@ pub enum RadParMsg {
     AddFirst,
     RemoveLast,
     Update,
+    Reset,
     Import(Vec<Radical>),  // TODO Sync?
     _CountAt(WeakDynamicIndex),
     RemoveAt(WeakDynamicIndex),
@@ -533,6 +543,9 @@ impl ComponentUpdate<AppModel> for RadParModel {
                 send!(parent_sender, AppMsg::UpdateRads(new_rads));
             }
             // TODO abstract the logic in an external function
+            RadParMsg::Reset => {
+                self.pars.clear();
+            }
             RadParMsg::Import(rads) => {
                 // Add the right amount of radical from a source
                 let target_len = rads.len();
@@ -710,6 +723,9 @@ impl FactoryPrototype for RadPar {
                         append: left_box = &gtk::Box {
                             set_orientation: gtk::Orientation::Vertical,
                             set_spacing: 5,
+                            set_margin_start: 5,
+                            set_margin_end: 5,
+                            set_margin_bottom: 15,
                             append: left_head = &gtk::Box {
                                 set_orientation: gtk::Orientation::Horizontal,
                                 set_halign: gtk::Align::Center,
@@ -743,10 +759,26 @@ impl FactoryPrototype for RadPar {
                             },
                             append = &adw::Bin {
                                 set_child = Some(&gtk::Grid) {
-                                    set_row_spacing: 5,
-                                    set_column_spacing: 5,
+                                    set_row_spacing: 10,
+                                    set_column_spacing: 10,
                                     set_halign: gtk::Align::Center,
-                                    attach(0, 0, 1, 1): lwa_label = &gtk::Label {
+
+                                    // column labels
+                                    attach(0, 0, 1, 1): col_0_label = &gtk::Label {
+                                        set_label: "Parameter",
+                                        set_halign: gtk::Align::Start,
+                                    },
+                                    attach(1, 0, 1, 1): col_1_label = &gtk::Label {
+                                        set_label: "Value",
+                                        set_halign: gtk::Align::Start,
+                                    },
+                                    attach(2, 0, 1, 1): col_2_label = &gtk::Label {
+                                        set_label: "Variation",
+                                        set_halign: gtk::Align::Start,
+                                    },
+
+                                    // Values
+                                    attach(0, 1, 1, 1): lwa_label = &gtk::Label {
                                         set_label: "Line Width",
                                         set_halign: gtk::Align::Start,
                                     },
@@ -770,12 +802,12 @@ impl FactoryPrototype for RadPar {
                                                 send!(sender, RadParMsg::SetLwaVar(key.downgrade(), val.value()));
                                             }
                                         },
-                                    attach(0, 1, 1, 1): lrtz_label = &gtk::Label {
+                                    attach(0, 2, 1, 1): lrtz_label = &gtk::Label {
                                         set_label: "Shape (Lrtz/Gauss)",
                                         set_halign: gtk::Align::Start,
                                         set_margin_end: 15,
                                     },
-                                    attach(1, 1, 1, 1): lrtz_entry_val = &gtk::SpinButton {
+                                    attach(1, 2, 1, 1): lrtz_entry_val = &gtk::SpinButton {
                                         set_adjustment: &RadPar::lrtz_adjustment(),
                                         set_digits: 1,
                                         set_value: watch!(self.lrtz_val),
@@ -783,7 +815,7 @@ impl FactoryPrototype for RadPar {
                                             send!(sender, RadParMsg::SetLrtzVal(key.downgrade(), val.value()));
                                         }
                                     },
-                                    attach(2, 1, 1, 1): lrtz_entry_var = &gtk::SpinButton {
+                                    attach(2, 2, 1, 1): lrtz_entry_var = &gtk::SpinButton {
                                         set_adjustment: &RadPar::var_adjustment(),
                                         set_digits: 1,
                                         set_value: watch!(self.lrtz_var),
@@ -792,11 +824,11 @@ impl FactoryPrototype for RadPar {
                                             send!(sender, RadParMsg::SetLrtzVar(key.downgrade(), val.value()));
                                         }
                                     },
-                                    attach(0, 2, 1, 1): amount_label = &gtk::Label {
+                                    attach(0, 3, 1, 1): amount_label = &gtk::Label {
                                         set_label: "Amount (%)",
                                         set_halign: gtk::Align::Start,
                                     },
-                                    attach(1, 2, 1, 1): amount_entry_val = &gtk::SpinButton {
+                                    attach(1, 3, 1, 1): amount_entry_val = &gtk::SpinButton {
                                         set_adjustment: &RadPar::amount_adjustment(),
                                         set_digits: 1,
                                         set_value: watch!(self.amount_val),
@@ -804,7 +836,7 @@ impl FactoryPrototype for RadPar {
                                             send!(sender, RadParMsg::SetAmountVal(key.downgrade(), val.value()));
                                         }
                                     },
-                                    attach(2, 2, 1, 1): amount_entry_var = &gtk::SpinButton {
+                                    attach(2, 3, 1, 1): amount_entry_var = &gtk::SpinButton {
                                         set_adjustment: &RadPar::var_adjustment(),
                                         set_digits: 1,
                                         set_value: watch!(self.amount_var),
@@ -813,11 +845,11 @@ impl FactoryPrototype for RadPar {
                                             send!(sender, RadParMsg::SetAmountVar(key.downgrade(), val.value()));
                                         }
                                     },
-                                    attach(0, 3, 1, 1): dh1_label = &gtk::Label {
+                                    attach(0, 4, 1, 1): dh1_label = &gtk::Label {
                                         set_label: "Center",
                                         set_halign: gtk::Align::Start,
                                     },
-                                    attach(1, 3, 1, 1): dh1_entry_val = &gtk::SpinButton {
+                                    attach(1, 4, 1, 1): dh1_entry_val = &gtk::SpinButton {
                                         set_adjustment: &RadPar::dh1_adjustment(),
                                         set_digits: 1,
                                         set_value: watch!(self.dh1_val),
@@ -825,7 +857,7 @@ impl FactoryPrototype for RadPar {
                                             send!(sender, RadParMsg::SetDh1Val(key.downgrade(), val.value()));
                                         }
                                     },
-                                    attach(2, 3, 1, 1): dh1_entry_var = &gtk::SpinButton {
+                                    attach(2, 4, 1, 1): dh1_entry_var = &gtk::SpinButton {
                                         set_adjustment: &RadPar::var_adjustment(),
                                         set_digits: 1,
                                         set_value: watch!(self.dh1_var),
@@ -846,21 +878,25 @@ impl FactoryPrototype for RadPar {
                                 set_orientation: gtk::Orientation::Horizontal,
                                 set_halign: gtk::Align::Center,
                                 set_spacing: 5,
+                                append = &gtk::Label {
+                                    set_label: "Nuclei",
+                                    set_css_classes: &["heading", "h4"],
+                                },
 
                                 append: nuc_controls_buttonbox = &gtk::Box {
                                     set_orientation: gtk::Orientation::Horizontal,
                                     set_spacing: 5,
-                                    set_halign: gtk::Align::Center,
+                                    set_halign: gtk::Align::End,
                                     append: add_new_nuc = &gtk::Button {
                                         set_label: "Add Nucleus",
-                                        // set_icon_name: "insert-object-symbolic",
+                                        set_icon_name: "insert-object-symbolic",
                                         connect_clicked(sender, key) => move |_| {
                                             send!(sender, RadParMsg::AddNuc(key.downgrade(), "New Nucleus".into()));
                                         }
                                     },
                                     append: remove_last_nuc = &gtk::Button {
                                         set_label: "Remove last Nuc",
-                                        // set_icon_name: "list-remove-symbolic",
+                                        set_icon_name: "list-remove-symbolic",
                                         connect_clicked(sender, key) => move |_| {
                                             send!(sender, RadParMsg::RemoveLastNuc(key.downgrade()));
                                         }
@@ -868,10 +904,6 @@ impl FactoryPrototype for RadPar {
                                 },
                             },
                             append: nuc_entries_frame = &gtk::Frame {
-                                set_label_widget = Some(&gtk::Label) {
-                                    set_label: "Nuclei",
-                                    set_css_classes: &["heading", "h4"],
-                                },
                                 set_margin_top: 5,
                                 set_margin_bottom: 5,
                                 set_margin_start: 5,
@@ -942,6 +974,7 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
 
         // Append new radical to the vector
         let add = gtk::Button::with_label("Add Rad");
+        add.set_icon_name("document-new-symbolic");
         add.set_halign(gtk::Align::Center);
 
         // Not added to the UI
