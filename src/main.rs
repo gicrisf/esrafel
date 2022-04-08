@@ -14,6 +14,7 @@ use relm4::{
     adw, gtk, send,
     AppUpdate, RelmComponent, ComponentUpdate, Model, RelmApp, Sender, Widgets,
     // factory::{FactoryVecDeque, DynamicIndex, WeakDynamicIndex},
+    actions::{RelmAction, RelmActionGroup},
 };
 
 use relm4_components::{
@@ -549,33 +550,9 @@ impl Widgets<AppModel, ()> for AppWidgets {
                         set_title: "Esrafel",
                         set_stack: Some(&stack),
                     },
-                    pack_end: menu_button = &gtk::MenuButton::new() {
+                    pack_end: menu_button = &gtk::MenuButton {
                         set_icon_name: "open-menu-symbolic",
-                        set_popover: popover = Some(&gtk::Popover) {
-                            set_child = Some(&gtk::Box) {
-                                set_orientation: gtk::Orientation::Vertical,
-                                append: timer = &gtk::CheckButton::with_label("30s") {
-                                    connect_toggled(sender) => move |b| {
-                                        if b.is_active() {
-                                        }
-                                    }
-                                },
-                                append = &gtk::CheckButton::with_label("60s") {
-                                    set_group: Some(&timer),
-                                    connect_toggled(sender) => move |b| {
-                                        if b.is_active() {
-                                        }
-                                    }
-                                },
-                                append = &gtk::CheckButton::with_label("180s") {
-                                    set_group: Some(&timer),
-                                    connect_toggled(sender) => move |b| {
-                                        if b.is_active() {
-                                        }
-                                    }
-                                }
-                            }
-                        }  // ./popover
+                        set_menu_model: Some(&main_menu),
                     },
                     set_centering_policy: CenteringPolicy::Strict,
                 },
@@ -760,6 +737,12 @@ impl Widgets<AppModel, ()> for AppWidgets {
         } // main_window
     }  // view!
 
+    menu! {
+        main_menu: {
+           "Test" => TestAction,
+        }
+    }  // menu macro
+
     fn pre_view() {
         if let Some(toast) = &model.last_toast {
             self.toast_overlay.add_toast(&toast);
@@ -792,6 +775,19 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
 
+        // Menu
+        let group = RelmActionGroup::<WindowActionGroup>::new();
+
+        let action: RelmAction<TestAction> = RelmAction::new_stateless(move |_| {
+            println!("Statelesss action!");
+        });
+
+        group.add_action(action);
+
+        let actions = group.into_action_group();
+        main_window.insert_action_group("win", Some(&actions));
+
+        // Params. panel
         send!(sender, AppMsg::RefreshPanel);
 
         // IDEA How to send from thread and through components
@@ -811,6 +807,11 @@ impl ParentWindow for AppWidgets {
         Some(self.main_window.clone().upcast::<gtk::Window>())
     }
 }
+
+// Actions
+
+relm4::new_action_group!(WindowActionGroup, "win");
+relm4::new_stateless_action!(TestAction, WindowActionGroup, "test");
 
 // -- MAIN
 
