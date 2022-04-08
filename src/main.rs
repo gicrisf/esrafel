@@ -5,7 +5,7 @@ use adw::{
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt, Cast, CheckButtonExt, PopoverExt, FrameExt, ComboBoxExtManual},
+              DrawingAreaExt, Cast, EditableExt, CheckButtonExt, PopoverExt, FrameExt, ComboBoxExtManual},
     Orientation,
     cairo::Context,
 };
@@ -296,6 +296,7 @@ enum AppMsg {
     UpdateRads(Vec<Radical>),
     SetSweep(f64),
     SetPoints(usize),  // then, temporarily convert to f64
+    ClearPanel,
     RefreshPanel,
     SpawnToast(String),
     ResetToast,
@@ -327,6 +328,9 @@ impl AppUpdate for AppModel {
                 self.rads = new_rads;
                 let action_string = format!("Updated! You are working with {} radicals now.", self.rads.len());
                 send!(sender, AppMsg::SpawnToast(action_string));
+            }
+            AppMsg::ClearPanel => {
+                components.params.send(RadParMsg::Reset).expect("Clear panel action failed");
             }
             AppMsg::RefreshPanel => {
                 components.params.send(RadParMsg::Import(self.rads.clone()))
@@ -447,6 +451,8 @@ impl AppUpdate for AppModel {
                                     }
 
                                     send!(sender, AppMsg::SpawnToast("State successfully imported!".into()));
+                                    send!(sender, AppMsg::ClearPanel);
+                                    send!(sender, AppMsg::RefreshPanel);
                                 }
                                 Err(e) => {
                                     let err_string = format!("Unable to load state. Error: {}", e);
@@ -636,6 +642,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                     set_text: "Sweep",
                                                 },
                                                 append: sweep_spin = &gtk::SpinButton {
+                                                    set_width_chars: 5,
                                                     set_adjustment: &gtk::Adjustment::new(
                                                         model.sweep,  // value
                                                         0.0,  // lower
@@ -659,6 +666,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                 // set_homogeneous: true,
                                                 append: &gtk::Label::new(Some("Points")),
                                                 append: points_spin = &gtk::SpinButton {
+                                                    set_width_chars: 5,
                                                     set_adjustment: &gtk::Adjustment::new(
                                                         model.points as f64,  // value
                                                         0.0,  // lower
@@ -697,7 +705,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                 },
                             } -> params_page: ViewStackPage {
                                 // set_icon_name: Some("document-print-symbolic"),
-                                set_icon_name: Some("applications-engineering-symbolic"),
+                                set_icon_name: Some("document-page-setup-symbolic"),
                                 set_badge_number: watch!(model.rads.len() as u32),
                             },
                             add_titled(Some("Plot"), "Plot") = &gtk::Box {
