@@ -1,5 +1,5 @@
 use adw::{
-    prelude::{AdwApplicationWindowExt, BinExt},
+    prelude::{AdwApplicationWindowExt, BinExt, PreferencesWindowExt},
     CenteringPolicy, ViewStackPage
 };
 
@@ -262,6 +262,51 @@ impl SaveDialogParent for AppModel {
     }
 }
 
+// Preferences Model
+
+struct PreferencesModel {
+    test_pref: bool,
+}
+
+enum PreferencesMsg {
+    Test,
+}
+
+impl Model for PreferencesModel {
+    type Msg = PreferencesMsg;
+    type Widgets = PreferencesWidgets;
+    type Components = ();
+}
+
+impl ComponentUpdate<AppModel> for PreferencesModel {
+    fn init_model(_parent_model: &AppModel) -> Self {
+        PreferencesModel {
+            test_pref: true
+        }
+    }
+
+    fn update(
+        &mut self,
+        msg: PreferencesMsg,
+        _components: &(),
+        _sender: Sender<PreferencesMsg>,
+        parent_sender: Sender<AppMsg>,
+    ) {
+        match msg {
+            PreferencesMsg::Test => self.test_pref = !self.test_pref,
+        }
+    }
+}
+
+#[relm4::widget]
+impl Widgets<PreferencesModel, AppModel> for PreferencesWidgets {
+    view! {
+        win = adw::PreferencesWindow {
+            set_search_enabled: true,
+        }
+    }  // view macro
+}
+
 // -- AppModel
 
 // Available simulation methods
@@ -313,6 +358,7 @@ struct AppComponents {
     open_button: RelmComponent<OpenButtonModel<OpenFileButtonConfig>, AppModel>,
     import_pars_button: RelmComponent<OpenButtonModel<ImportParsButtonConfig>, AppModel>,
     save_dialog: RelmComponent<SaveDialogModel<SaveDialogConfig>, AppModel>,
+    preferences: RelmComponent<PreferencesModel, AppModel>,
     // status: RelmComponent<StatusModel, AppModel>,
 }
 
@@ -739,7 +785,13 @@ impl Widgets<AppModel, ()> for AppWidgets {
 
     menu! {
         main_menu: {
-           "Test" => TestAction,
+            // TODO dark mode
+            "Preferences" => TestAction,
+            "Keyboard shortcuts" => TestAction,
+            section! {
+                "Help" => TestAction,
+                "About ESRafel" => TestAction,
+            }  // Info section
         }
     }  // menu macro
 
