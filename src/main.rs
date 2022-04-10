@@ -37,12 +37,14 @@ mod esr_io;
 mod sim;
 mod params;
 mod preferences;
+mod about;
 mod nuc_object;
 
 use sim::Radical;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
 use preferences::{PreferencesModel, PreferencesMsg};
+use about::{AboutModel, AboutMsg};
 
 // -- Chart model
 
@@ -307,6 +309,7 @@ enum AppMsg {
     SaveRequest,
     SaveResponse(PathBuf),
     ShowPreferences,
+    ShowAbout,
 }
 
 #[derive(relm4::Components)]
@@ -317,6 +320,7 @@ struct AppComponents {
     import_pars_button: RelmComponent<OpenButtonModel<ImportParsButtonConfig>, AppModel>,
     save_dialog: RelmComponent<SaveDialogModel<SaveDialogConfig>, AppModel>,
     preferences: RelmComponent<PreferencesModel, AppModel>,
+    about: RelmComponent<AboutModel, AppModel>,
     // status: RelmComponent<StatusModel, AppModel>,
 }
 
@@ -534,7 +538,10 @@ impl AppUpdate for AppModel {
                 // Done
             }
             AppMsg::ShowPreferences => {
-               components.preferences.send(PreferencesMsg::Show).unwrap();
+               components.preferences.send(PreferencesMsg::Show).expect("Cannot open Preferences Window");
+            }
+            AppMsg::ShowAbout => {
+                components.about.send(AboutMsg::Show).expect("Cannot open About Dialog");
             }
         }
         true
@@ -751,7 +758,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
             "Keyboard shortcuts" => TestAction,
             section! {
                 "Help" => TestAction,
-                "About ESRafel" => TestAction,
+                "About ESRafel" => ShowAboutAction,
             }  // Info section
         }
     }  // menu macro
@@ -788,7 +795,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
             .flags(gtk::glib::BindingFlags::SYNC_CREATE)
             .build();
 
-        // Menu
+        // Make main Action Group
         let group = RelmActionGroup::<WindowActionGroup>::new();
 
         let action: RelmAction<TestAction> = RelmAction::new_stateless(move |_| {
@@ -800,9 +807,17 @@ impl Widgets<AppModel, ()> for AppWidgets {
             send!(sender1, AppMsg::ShowPreferences);
         });
 
+        let sender2 = sender.clone();
+        let show_about_action: RelmAction<ShowAboutAction> = RelmAction::new_stateless(move |_| {
+            send!(sender2, AppMsg::ShowAbout);
+        });
+
+        // Add actions to the main group
         group.add_action(action);
         group.add_action(show_preferences_action);
+        group.add_action(show_about_action);
 
+        // Actually insert the action group
         let actions = group.into_action_group();
         main_window.insert_action_group("win", Some(&actions));
 
@@ -831,7 +846,8 @@ impl ParentWindow for AppWidgets {
 
 relm4::new_action_group!(WindowActionGroup, "win");
 relm4::new_stateless_action!(TestAction, WindowActionGroup, "test");
-relm4::new_stateless_action!(ShowPreferencesAction, WindowActionGroup, "test");
+relm4::new_stateless_action!(ShowPreferencesAction, WindowActionGroup, "preferences");
+relm4::new_stateless_action!(ShowAboutAction, WindowActionGroup, "about");
 
 // -- MAIN
 
