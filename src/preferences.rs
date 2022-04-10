@@ -3,7 +3,7 @@ use crate::{adw, gtk, send, AppMsg, AppModel, Sender, Widgets, ComponentUpdate, 
 use gtk::prelude::{WidgetExt, GtkWindowExt};
 
 use adw::{
-    prelude::{PreferencesWindowExt},
+    prelude::{PreferencesWindowExt, AdwWindowExt, PreferencesPageExt, PreferencesGroupExt, PreferencesRowExt},
 };
 
 pub struct PreferencesModel {
@@ -50,9 +50,32 @@ impl ComponentUpdate<AppModel> for PreferencesModel {
 impl Widgets<PreferencesModel, AppModel> for PreferencesWidgets {
     view! {
         win = adw::PreferencesWindow {
-            set_search_enabled: true,
+            set_search_enabled: false,
             set_visible: watch!(model.is_active),
             set_modal: true,
+            set_destroy_with_parent: true,
+            // Already made manually: could replace with this
+            // set_hide_on_close: true,
+            set_modal: true,
+
+            // set_content = Some(&adw::PreferencesGroup) {            } // Group
+
+            add = &adw::PreferencesPage {
+                set_name: Some("Nome"),
+                set_title: "Titolo",
+
+                add = &adw::PreferencesGroup {
+                    set_title: "Nome gruppo",
+                    set_description: Some("Descrizione gruppo blabla"),
+                    add= &adw::ActionRow {
+                        set_title: "riga"
+                    },
+                    add = &adw::ActionRow {
+                        set_title: "un'altra riga"
+                    },
+                },
+            }
+
         }
     }  // view macro
 
