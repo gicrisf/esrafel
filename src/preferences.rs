@@ -3,7 +3,8 @@ use crate::{adw, gtk, send, AppMsg, AppModel, Sender, Widgets, ComponentUpdate, 
 use gtk::prelude::{WidgetExt, GtkWindowExt};
 
 use adw::{
-    prelude::{PreferencesWindowExt, AdwWindowExt, PreferencesPageExt, PreferencesGroupExt, PreferencesRowExt},
+    prelude::{PreferencesWindowExt, AdwWindowExt, PreferencesPageExt,
+              PreferencesGroupExt, PreferencesRowExt, ActionRowExt, ListBoxRowExt},
 };
 
 pub struct PreferencesModel {
@@ -54,32 +55,47 @@ impl Widgets<PreferencesModel, AppModel> for PreferencesWidgets {
             set_visible: watch!(model.is_active),
             set_modal: true,
             set_destroy_with_parent: true,
-            // Already made manually: could replace with this
+            // set_position: gtk::WindowPosition::CenterOnParent,
+
+            // Already made manually
             // set_hide_on_close: true,
+
             set_modal: true,
-
-            // set_content = Some(&adw::PreferencesGroup) {            } // Group
-
             add = &adw::PreferencesPage {
-                set_name: Some("Nome"),
-                set_title: "Titolo",
+                set_name: Some("Preferences Page"),
+                set_title: "Preferences",
 
                 add = &adw::PreferencesGroup {
-                    set_title: "Nome gruppo",
-                    set_description: Some("Descrizione gruppo blabla"),
+                    set_title: "Plotting",
+                    set_description: Some("Colors"),
                     add= &adw::ActionRow {
-                        set_title: "riga"
+                        set_title: "Background",
+                        // add_suffix: &gtk::ColorButton { ... it doesn't support set_valign ...},
+                        add_suffix: &gtk::builders::ColorButtonBuilder::new()
+                            .valign(gtk::Align::Center)
+                            .build(),
                     },
                     add = &adw::ActionRow {
-                        set_title: "un'altra riga"
+                        set_title: "Empirical",
+                        set_valign: gtk::Align::Center,
+                        add_suffix: &gtk::builders::ColorButtonBuilder::new()
+                            .valign(gtk::Align::Center)
+                            .build(),
+                    },
+                    add = &adw::ActionRow {
+                        set_title: "Theoretical",
+                        set_valign: gtk::Align::Center,
+                        add_suffix: &gtk::builders::ColorButtonBuilder::new()
+                            .valign(gtk::Align::Center)
+                            .build(),
                     },
                 },
             }
-
         }
     }  // view macro
 
     fn pre_view() {
+        // Could replace with set_hide_on_close
         let sender1 = sender.clone();
         self.root_widget().connect_close_request(move |_| {
             // &model.is_active = false;
