@@ -266,10 +266,12 @@ impl SaveDialogParent for AppModel {
 
 struct PreferencesModel {
     test_pref: bool,
+    is_active: bool,
 }
 
 enum PreferencesMsg {
     Test,
+    Show,
 }
 
 impl Model for PreferencesModel {
@@ -281,7 +283,8 @@ impl Model for PreferencesModel {
 impl ComponentUpdate<AppModel> for PreferencesModel {
     fn init_model(_parent_model: &AppModel) -> Self {
         PreferencesModel {
-            test_pref: true
+            test_pref: true,
+            is_active: false,
         }
     }
 
@@ -294,6 +297,7 @@ impl ComponentUpdate<AppModel> for PreferencesModel {
     ) {
         match msg {
             PreferencesMsg::Test => self.test_pref = !self.test_pref,
+            PreferencesMsg::Show => self.is_active = true,
         }
     }
 }
@@ -303,6 +307,7 @@ impl Widgets<PreferencesModel, AppModel> for PreferencesWidgets {
     view! {
         win = adw::PreferencesWindow {
             set_search_enabled: true,
+            set_visible: watch!(model.is_active),
         }
     }  // view macro
 }
@@ -349,6 +354,7 @@ enum AppMsg {
     SetSimMethod(SimulationMethod),
     SaveRequest,
     SaveResponse(PathBuf),
+    ShowPreferences,
 }
 
 #[derive(relm4::Components)]
@@ -575,6 +581,9 @@ impl AppUpdate for AppModel {
 
                 // Done
             }
+            AppMsg::ShowPreferences => {
+               components.preferences.send(PreferencesMsg::Show).unwrap();
+            }
         }
         true
     }
@@ -786,7 +795,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
     menu! {
         main_menu: {
             // TODO dark mode
-            "Preferences" => TestAction,
+            "Preferences" => ShowPreferencesAction,
             "Keyboard shortcuts" => TestAction,
             section! {
                 "Help" => TestAction,
@@ -834,7 +843,13 @@ impl Widgets<AppModel, ()> for AppWidgets {
             println!("Statelesss action!");
         });
 
+        let sender1 = sender.clone();
+        let show_preferences_action: RelmAction<ShowPreferencesAction> = RelmAction::new_stateless(move |_| {
+            send!(sender1, AppMsg::ShowPreferences);
+        });
+
         group.add_action(action);
+        group.add_action(show_preferences_action);
 
         let actions = group.into_action_group();
         main_window.insert_action_group("win", Some(&actions));
@@ -864,6 +879,7 @@ impl ParentWindow for AppWidgets {
 
 relm4::new_action_group!(WindowActionGroup, "win");
 relm4::new_stateless_action!(TestAction, WindowActionGroup, "test");
+relm4::new_stateless_action!(ShowPreferencesAction, WindowActionGroup, "test");
 
 // -- MAIN
 
