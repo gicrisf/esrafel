@@ -36,11 +36,13 @@ mod drawers;
 mod esr_io;
 mod sim;
 mod params;
+mod preferences;
 mod nuc_object;
 
 use sim::Radical;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
+use preferences::{PreferencesModel, PreferencesMsg};
 
 // -- Chart model
 
@@ -260,56 +262,6 @@ impl SaveDialogParent for AppModel {
     fn save_msg(path: PathBuf) -> Self::Msg {
         AppMsg::SaveResponse(path)
     }
-}
-
-// Preferences Model
-
-struct PreferencesModel {
-    test_pref: bool,
-    is_active: bool,
-}
-
-enum PreferencesMsg {
-    Test,
-    Show,
-}
-
-impl Model for PreferencesModel {
-    type Msg = PreferencesMsg;
-    type Widgets = PreferencesWidgets;
-    type Components = ();
-}
-
-impl ComponentUpdate<AppModel> for PreferencesModel {
-    fn init_model(_parent_model: &AppModel) -> Self {
-        PreferencesModel {
-            test_pref: true,
-            is_active: false,
-        }
-    }
-
-    fn update(
-        &mut self,
-        msg: PreferencesMsg,
-        _components: &(),
-        _sender: Sender<PreferencesMsg>,
-        parent_sender: Sender<AppMsg>,
-    ) {
-        match msg {
-            PreferencesMsg::Test => self.test_pref = !self.test_pref,
-            PreferencesMsg::Show => self.is_active = true,
-        }
-    }
-}
-
-#[relm4::widget]
-impl Widgets<PreferencesModel, AppModel> for PreferencesWidgets {
-    view! {
-        win = adw::PreferencesWindow {
-            set_search_enabled: true,
-            set_visible: watch!(model.is_active),
-        }
-    }  // view macro
 }
 
 // -- AppModel
