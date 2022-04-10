@@ -1,8 +1,8 @@
 use adw::prelude::BinExt;
 
 use gtk::{
-    prelude::{BoxExt, FrameExt, ButtonExt, OrientableExt, ListModelExt,
-              EditableExt, StaticType, ObjectExt, WidgetExt, GridExt},
+    prelude::{BoxExt, FrameExt, ButtonExt, OrientableExt, ListModelExt, // EntryExt,
+              StaticType, ObjectExt, WidgetExt, GridExt},
     gio, glib,
     };
 
@@ -160,30 +160,12 @@ impl MicroWidgets<NucFactoryModel> for NucFactoryWidgets {
 
     fn init_view(model: &NucFactoryModel, sender: Sender<NucParMsg>) -> Self {
         let main_box = gtk::Box::new(gtk::Orientation::Vertical, 5);
-        let name = gtk::Entry::builder().placeholder_text("Nucleus").build();
-        let add = gtk::Button::with_label("Add new");
-        let remove = gtk::Button::with_label("Remove selected");
-
         let scroller = gtk::ScrolledWindow::builder()
             .hexpand(true)
             .vexpand(true)
             .build();
 
-        // TODO restore suppressed entry name for the moment
-        // main_box.append(&name);
-        // main_box.append(&add);
-        // main_box.append(&remove);
         main_box.append(&scroller);
-
-        let sender2 = sender.clone();
-        add.connect_clicked(move |_| {
-            let text: String = name.text().into();
-            send!(sender2, NucParMsg::Add(text));
-        });
-
-        remove.connect_clicked(move |_| {
-            send!(sender, NucParMsg::RemoveLast);
-        });
 
         let list_box = gtk::ListBox::new();
 
@@ -484,7 +466,7 @@ pub enum RadParMsg {
     RemoveLast,
     Update,
     Reset,
-    Import(Vec<Radical>),  // TODO Sync?
+    Import(Vec<Radical>),  // Sync?
     _CountAt(WeakDynamicIndex),
     RemoveAt(WeakDynamicIndex),
     _InsertBefore(WeakDynamicIndex),
@@ -529,7 +511,7 @@ impl ComponentUpdate<AppModel> for RadParModel {
     ) {
         match msg {
             RadParMsg::AddFirst => {
-                self.pars.push_front(RadPar::new(self.received_messages));
+                self.pars.push_back(RadPar::new(self.received_messages));
             }
             RadParMsg::RemoveLast => {
                 self.pars.pop_back();
@@ -542,11 +524,11 @@ impl ComponentUpdate<AppModel> for RadParModel {
 
                 send!(parent_sender, AppMsg::UpdateRads(new_rads));
             }
-            // TODO abstract the logic in an external function
             RadParMsg::Reset => {
                 self.pars.clear();
             }
             RadParMsg::Import(rads) => {
+                // TODO abstract the logic in an external function
                 // Add the right amount of radical from a source
                 let target_len = rads.len();
                 if self.pars.len() != target_len {
@@ -887,6 +869,11 @@ impl FactoryPrototype for RadPar {
                                     set_orientation: gtk::Orientation::Horizontal,
                                     set_spacing: 5,
                                     set_halign: gtk::Align::End,
+                                    // Entry name for new nucleus
+                                    // append: new_nuc_entry = &gtk::Entry {
+                                    //  set_placeholder_text: Some("New Nucleus"),
+                                    // },
+                                    // Buttons
                                     append: add_new_nuc = &gtk::Button {
                                         set_label: "Add Nucleus",
                                         set_icon_name: "insert-object-symbolic",
@@ -982,7 +969,7 @@ impl Widgets<RadParModel, AppModel> for RadParWidgets {
         remove.set_css_classes(&["destructive-action"]);
 
         // Convert UI data in simulator parameters
-        let update = gtk::Button::with_label("Update Simulator");
+        let update = gtk::Button::with_label("Update Params.");
         // update.set_css_classes(&["suggested-action"]);
 
         // TODO cancel function
