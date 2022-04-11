@@ -41,7 +41,7 @@ mod shortcuts;
 mod about;
 mod nuc_object;
 
-use sim::Radical;
+use sim::{Radical, Nucleus};
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
 use preferences::{PreferencesModel, PreferencesMsg};
@@ -221,6 +221,9 @@ impl OpenDialogConfig for ImportParsButtonConfig {
     fn open_dialog_config(_model: &Self::Model) -> OpenDialogSettings {
 
         let filter = gtk::FileFilter::new();
+        // Legacy
+        filter.add_pattern("*.sim");
+
         // Just JSON files with esrafel head
         filter.add_pattern("*.esrafel");
 
@@ -448,6 +451,7 @@ impl AppUpdate for AppModel {
                                                 Err(e) => {
                                                     let err_string = format!("Unable to load this state. Error: {}", e);
                                                     send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                                    // TODO I don't like replacing the model on error!
                                                     AppModel::default()
                                                 }
                                             };
@@ -456,16 +460,14 @@ impl AppUpdate for AppModel {
                                             *self = loaded_model;
 
                                             send!(sender, AppMsg::SpawnToast(success_string));
+                                            send!(sender, AppMsg::ClearPanel);
+                                            send!(sender, AppMsg::RefreshPanel);
                                         },
                                         Err(e) => {
                                             let err_string = format!("Unable to read string in this file. Error: {}", e);
                                             send!(sender, AppMsg::SpawnToast(err_string.into()));
                                         }
                                     }
-
-                                    send!(sender, AppMsg::SpawnToast("State successfully imported!".into()));
-                                    send!(sender, AppMsg::ClearPanel);
-                                    send!(sender, AppMsg::RefreshPanel);
                                 }
                                 Err(e) => {
                                     let err_string = format!("Unable to load state. Error: {}", e);
@@ -473,6 +475,67 @@ impl AppUpdate for AppModel {
                                 }
                             }
                             // end
+                        }
+                        "sim" => {
+                            // Show this if loading succeeds
+                            let success_string = format!("Successfully loaded state from {:?}!", &path).into();
+
+                            match File::open(path) {
+                                Ok(mut file) => {
+                                    match file.read_to_string(&mut data) {
+                                        Ok(_) => {
+                                            let mut lines = data.lines();
+                                            let mut rads = Vec::new();
+
+                                            // TODO make this parsing process a separate function
+                                            let how_many_rads: i32 = lines.next().unwrap().trim().parse().expect("Cannot read how many Radicals");
+                                            let points: i32 = lines.next().unwrap().trim().parse().unwrap();
+                                            let sweep: i32 = lines.next().unwrap().trim().parse().unwrap();
+
+                                            // println!("rads: {}, points: {}, sweep: {}", how_many_rads, points, sweep);
+
+                                            for _ in 0..how_many_rads {
+                                                let amount: f64 = lines.next().unwrap().trim().parse().unwrap();
+                                                let dh1: f64 = lines.next().unwrap().trim().parse().unwrap();
+                                                let lwa: f64 = lines.next().unwrap().trim().parse().unwrap();
+                                                let lrtz: f64 = lines.next().unwrap().trim().parse().unwrap();
+
+                                                // println!("New radical with amount {}, center {}, lwa {}, lrtz {}", amount, center, lw, lrtz);
+
+                                                let how_many_const: i32 = lines.next().unwrap().trim().parse().unwrap();
+
+                                                let mut nucs = Vec::new();
+                                                for _ in 0..how_many_const {
+                                                    let eqs: i32 = lines.next().unwrap().trim().parse().unwrap();
+                                                    let spin: f64 = lines.next().unwrap().trim().parse().unwrap();
+                                                    let hpf: f64 = lines.next().unwrap().trim().parse().unwrap();
+
+                                                    // println!("New nuc with eqs {}, spin {}, hpf {}", nuclei, spin, hpf);
+                                                    nucs.push(Nucleus::set(spin, hpf, eqs as f64));
+                                                }  // for nuc in nucs
+
+                                                rads.push(Radical::set(lwa, lrtz, amount, dh1, nucs));
+                                            }  // for rad in rads
+
+                                            self.points = points;
+                                            self.sweep = sweep;
+                                            self.rads = rads;
+                                        }
+                                        Err(e) => {
+                                            let err_string = format!("Unable to load this state. Error: {}", e);
+                                            send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                        }
+
+                                    }
+                                    send!(sender, AppMsg::SpawnToast(success_string));
+                                    send!(sender, AppMsg::ClearPanel);
+                                    send!(sender, AppMsg::RefreshPanel);
+                                }
+                                Err(e) => {
+                                    let err_string = format!("Unable to read string in this file. Error: {}", e);
+                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                }
+                            }  // match File from path
                         }
                         _ => {
                             send!(sender, AppMsg::SpawnToast("How did you even clicked on this file?!".into()));
@@ -787,6 +850,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
         }
 
         // Double check if model and selected method are the same, then set it rightly
+        // Could set the default in the widget itself and, then, remove this check
         match &model.sim_method {
             Some(method) => {
                 match method {
