@@ -5,7 +5,7 @@ use adw::{
 
 use gtk::{
     prelude::{BoxExt, ButtonExt, GtkWindowExt, ObjectExt, OrientableExt, ToggleButtonExt, WidgetExt,
-              DrawingAreaExt, Cast, EditableExt, CheckButtonExt, PopoverExt, FrameExt, ComboBoxExtManual},
+              DrawingAreaExt, Cast, EditableExt, CheckButtonExt, PopoverExt, FrameExt, ComboBoxExtManual, ComboBoxExt},
     Orientation,
     cairo::Context,
 };
@@ -274,7 +274,7 @@ impl SaveDialogParent for AppModel {
 #[derive(Serialize, Deserialize)]
 enum SimulationMethod {
     MC199,
-    // Dynamic1999
+    Dynamic1999
     // ...
 }
 
@@ -680,8 +680,18 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                 set_margin_bottom: 5,
                                                 append: &gtk::Label::new(Some("Simulation method")),
                                                 append: sim_method_entry = &gtk::ComboBoxText {
-                                                    append_text: "MC 1999"
+                                                    append_text: "MC 1999",
+                                                    append_text: "Dynamic 1999",
+                                                    connect_changed(sender) => move |selector| {
+                                                        match selector.active_text().expect("cannot get combobox value").as_str().into() {
+                                                            "MC 1999" => send!(sender, AppMsg::SetSimMethod(SimulationMethod::MC199)),
+                                                            "Dynamic 1999" => send!(sender, AppMsg::SetSimMethod(SimulationMethod::Dynamic1999)),
+                                                            _ => send!(sender, AppMsg::SpawnToast("Invalid ComboBox Value for Sim. Method".into())),
+
+                                                        }
+                                                    }
                                                 },  // toggle button
+
                                             },
 
                                         }
@@ -769,11 +779,15 @@ impl Widgets<AppModel, ()> for AppWidgets {
             send!(sender, AppMsg::ResetToast);
         }
 
+        // Double check if model and selected method are the same, then set it rightly
         match &model.sim_method {
             Some(method) => {
                 match method {
                     SimulationMethod::MC199 => {
                         self.sim_method_entry.set_active(Some(0));
+                    }
+                    SimulationMethod::Dynamic1999 => {
+                        self.sim_method_entry.set_active(Some(1));
                     }
                 }
             }
@@ -854,8 +868,7 @@ relm4::new_stateless_action!(ShowAboutAction, WindowActionGroup, "about");
 fn main() {
     let model = AppModel {
         empirical: None,
-        // TODO start without radicals and show welcome screen
-        rads: vec![Radical::var_probe()],
+        rads: Vec::new(),
         points: 1024,
         sweep: 100.0,
         sigma: 100000000000000000000.0,  //1e+20
