@@ -37,6 +37,7 @@ mod esr_io;
 mod sim;
 mod params;
 mod preferences;
+mod shortcuts;
 mod about;
 mod nuc_object;
 
@@ -44,6 +45,7 @@ use sim::Radical;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
 use preferences::{PreferencesModel, PreferencesMsg};
+use shortcuts::{ShortcutsModel, ShortcutsMsg};
 use about::{AboutModel, AboutMsg};
 
 // -- Chart model
@@ -310,6 +312,7 @@ enum AppMsg {
     SaveResponse(PathBuf),
     ShowPreferences,
     ShowAbout,
+    ShowShortcuts,
 }
 
 #[derive(relm4::Components)]
@@ -320,6 +323,7 @@ struct AppComponents {
     import_pars_button: RelmComponent<OpenButtonModel<ImportParsButtonConfig>, AppModel>,
     save_dialog: RelmComponent<SaveDialogModel<SaveDialogConfig>, AppModel>,
     preferences: RelmComponent<PreferencesModel, AppModel>,
+    shortcuts: RelmComponent<ShortcutsModel, AppModel>,
     about: RelmComponent<AboutModel, AppModel>,
     // status: RelmComponent<StatusModel, AppModel>,
 }
@@ -543,6 +547,9 @@ impl AppUpdate for AppModel {
             AppMsg::ShowAbout => {
                 components.about.send(AboutMsg::Show).expect("Cannot open About Dialog");
             }
+            AppMsg::ShowShortcuts => {
+                components.shortcuts.send(ShortcutsMsg::Show).expect("Cannot open Shortcuts window");
+            }
         }
         true
     }
@@ -765,7 +772,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
         main_menu: {
             // TODO dark mode
             "Preferences" => ShowPreferencesAction,
-            "Keyboard shortcuts" => TestAction,
+            "Keyboard shortcuts" => ShowShortcutsAction,
             section! {
                 "Help" => TestAction,
                 "About ESRafel" => ShowAboutAction,
@@ -826,9 +833,15 @@ impl Widgets<AppModel, ()> for AppWidgets {
             send!(sender2, AppMsg::ShowAbout);
         });
 
+        let sender3 = sender.clone();
+        let show_shortcuts_action: RelmAction<ShowShortcutsAction> = RelmAction::new_stateless(move |_| {
+            send!(sender3, AppMsg::ShowShortcuts);
+        });
+
         // Add actions to the main group
         group.add_action(action);
         group.add_action(show_preferences_action);
+        group.add_action(show_shortcuts_action);
         group.add_action(show_about_action);
 
         // Actually insert the action group
@@ -861,6 +874,7 @@ impl ParentWindow for AppWidgets {
 relm4::new_action_group!(WindowActionGroup, "win");
 relm4::new_stateless_action!(TestAction, WindowActionGroup, "test");
 relm4::new_stateless_action!(ShowPreferencesAction, WindowActionGroup, "preferences");
+relm4::new_stateless_action!(ShowShortcutsAction, WindowActionGroup, "shortcuts");
 relm4::new_stateless_action!(ShowAboutAction, WindowActionGroup, "about");
 
 // -- MAIN
