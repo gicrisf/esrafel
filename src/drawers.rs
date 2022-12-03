@@ -57,8 +57,7 @@ impl Line {
         let max = data
             .iter()
             .copied()
-            .map(NotNan::new)
-            .flatten() // ignore NAN values (errors from the previous line)
+            .flat_map(NotNan::new) // ignore NAN values
             .max()
             .map(NotNan::into_inner)
             .expect("Cannot define max of Line");
@@ -66,8 +65,7 @@ impl Line {
         let min = data
             .iter()
             .copied()
-            .map(NotNan::new)
-            .flatten() // ignore NAN values (errors from the previous line)
+            .flat_map(NotNan::new)
             .min()
             .map(NotNan::into_inner)
             .expect("Cannot define min of Line");

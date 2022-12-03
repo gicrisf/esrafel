@@ -225,6 +225,8 @@ impl OpenDialogConfig for ImportParsButtonConfig {
         filter.add_pattern("*.sim");
 
         // Just JSON files with esrafel head
+        // This is for saving and loading STATES!
+        // TODO esf; srf; jsrf ("jaysrafel")
         filter.add_pattern("*.esrafel");
 
         OpenDialogSettings {
@@ -274,7 +276,7 @@ impl SaveDialogParent for AppModel {
 // -- AppModel
 
 // Available simulation methods
-// This will make it easier further extensions of thee backend
+// This will make it easier further backend extensions
 
 #[derive(Serialize, Deserialize)]
 enum SimulationMethod {
@@ -287,7 +289,7 @@ enum SimulationMethod {
 struct AppModel {
     empirical: Option<Vec<f64>>,
     rads: Vec<Radical>,
-    points: usize,
+    points: i32,
     sweep: f64,
     sigma: f64,
     iters: usize,
@@ -305,7 +307,7 @@ enum AppMsg {
     Open(PathBuf),
     UpdateRads(Vec<Radical>),
     SetSweep(f64),
-    SetPoints(usize),  // then, temporarily convert to f64
+    SetPoints(i32),  // then, temporarily convert to f64
     ClearPanel,
     RefreshPanel,
     SpawnToast(String),
@@ -408,7 +410,7 @@ impl AppUpdate for AppModel {
                                 Ok(file) => f = Some(file),
                                 Err(e) => {
                                     let err_string = format!("Unable to open txt file. Error: {}", e);
-                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                    send!(sender, AppMsg::SpawnToast(err_string));
                                     f = None;
                                 }
                             };
@@ -422,7 +424,7 @@ impl AppUpdate for AppModel {
                                         },
                                         Err(e) => {
                                             let err_string = format!("Unable to read string in this file. Error: {}", e);
-                                            send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                            send!(sender, AppMsg::SpawnToast(err_string));
                                         }
                                     }
                                 }
@@ -439,7 +441,7 @@ impl AppUpdate for AppModel {
                         }  // json case
                         "esrafel" => {
                             // Show this if loading succeeds
-                            let success_string = format!("Successfully loaded state from {:?}!", &path).into();
+                            let success_string = format!("Successfully loaded state from {:?}!", &path);
 
                             match File::open(path) {
                                 Ok(mut file) => {
@@ -450,7 +452,7 @@ impl AppUpdate for AppModel {
                                                 Ok(m) => { m }
                                                 Err(e) => {
                                                     let err_string = format!("Unable to load this state. Error: {}", e);
-                                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                                    send!(sender, AppMsg::SpawnToast(err_string));
                                                     // TODO I don't like replacing the model on error!
                                                     AppModel::default()
                                                 }
@@ -465,20 +467,20 @@ impl AppUpdate for AppModel {
                                         },
                                         Err(e) => {
                                             let err_string = format!("Unable to read string in this file. Error: {}", e);
-                                            send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                            send!(sender, AppMsg::SpawnToast(err_string));
                                         }
                                     }
                                 }
                                 Err(e) => {
                                     let err_string = format!("Unable to load state. Error: {}", e);
-                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                    send!(sender, AppMsg::SpawnToast(err_string));
                                 }
                             }
                             // end
                         }
                         "sim" => {
                             // Show this if loading succeeds
-                            let success_string = format!("Successfully loaded state from {:?}!", &path).into();
+                            let success_string = format!("Successfully loaded state from {:?}!", &path);
 
                             match File::open(path) {
                                 Ok(mut file) => {
@@ -518,12 +520,12 @@ impl AppUpdate for AppModel {
                                             }  // for rad in rads
 
                                             self.points = points;
-                                            self.sweep = sweep;
+                                            self.sweep = sweep.into();
                                             self.rads = rads;
                                         }
                                         Err(e) => {
                                             let err_string = format!("Unable to load this state. Error: {}", e);
-                                            send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                            send!(sender, AppMsg::SpawnToast(err_string));
                                         }
 
                                     }
@@ -533,7 +535,7 @@ impl AppUpdate for AppModel {
                                 }
                                 Err(e) => {
                                     let err_string = format!("Unable to read string in this file. Error: {}", e);
-                                    send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                    send!(sender, AppMsg::SpawnToast(err_string));
                                 }
                             }  // match File from path
                         }
@@ -581,24 +583,24 @@ impl AppUpdate for AppModel {
                                 match write!(file, "{}", &data) {
                                     Ok(_) => {
                                         send!(sender, AppMsg::SpawnToast(
-                                            format!("File successfully saved into {:?}", &path).into()
+                                            format!("File successfully saved into {:?}", &path)
                                         ));
                                     }
                                     Err(e) => {
                                         let err_string = format!("Unable to create file. Error: {}", e);
-                                        send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                        send!(sender, AppMsg::SpawnToast(err_string));
                                     }
                                 }
                             }
                             Err(e) => {
                                 let err_string = format!("Unable to create file. Error: {}", e);
-                                send!(sender, AppMsg::SpawnToast(err_string.into()));
+                                send!(sender, AppMsg::SpawnToast(err_string));
                             }
                         };
                     }
                     Err(e) => {
                         let err_string = format!("Failed serializing current state. Error: {}", e);
-                        send!(sender, AppMsg::SpawnToast(err_string.into()));
+                        send!(sender, AppMsg::SpawnToast(err_string));
                     }
                 };
 
@@ -737,7 +739,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                         1000.0  // page_size
                                                     ),
                                                     connect_value_changed(sender) => move |val| {
-                                                        send!(sender, AppMsg::SetPoints(val.value_as_int() as usize));
+                                                        send!(sender, AppMsg::SetPoints(val.value_as_int() as i32));
                                                     }
                                                 },
                                             },
@@ -753,7 +755,7 @@ impl Widgets<AppModel, ()> for AppWidgets {
                                                     append_text: "MC 1999",
                                                     append_text: "Dynamic 1999",
                                                     connect_changed(sender) => move |selector| {
-                                                        match selector.active_text().expect("cannot get combobox value").as_str().into() {
+                                                        match selector.active_text().expect("cannot get combobox value").as_str() {
                                                             "MC 1999" => send!(sender, AppMsg::SetSimMethod(SimulationMethod::MC199)),
                                                             "Dynamic 1999" => send!(sender, AppMsg::SetSimMethod(SimulationMethod::Dynamic1999)),
                                                             _ => send!(sender, AppMsg::SpawnToast("Invalid ComboBox Value for Sim. Method".into())),
