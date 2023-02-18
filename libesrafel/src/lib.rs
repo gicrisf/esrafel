@@ -1,5 +1,5 @@
-pub mod cmd99;
-// use crate::cmd99::{calcola, errore};
+pub mod eprft;
+pub mod io;
 use serde::{Serialize, Deserialize};
 use rand::{thread_rng, Rng};
 
@@ -94,31 +94,6 @@ pub fn add(left: usize, right: usize) -> usize {
     left + right
 }
 
-// IO function
-// Read spectrum from an ASCII source
-pub fn get_from_ascii(content: &str) -> Vec<f64> {
-    // let mut fld = Vec::new();  // field
-    let mut int = Vec::new();  // intensity
-
-    for line in content.lines() {
-        let line = line.trim();  // like Python's strip;
-        // TODO split_ascii_whitespace?
-        let cols = line.split_whitespace(); // like Python's split;
-
-        if cols.clone().count() == 3 {  // Can I replace the clone() solution?
-            for (idx, col) in cols.enumerate() {
-                match idx {
-                    // 1 => Some(fld.push(col.parse().unwrap())),
-                    2 => Some(int.push(col.parse().unwrap())),
-                    _ => None,
-                };
-            }
-        }
-    };
-
-    int
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,7 +115,7 @@ mod tests {
             "4     3262.95527859238       -22.2275390625\n"
         );
 
-        let result = get_from_ascii(input_text);
+        let result = io::get_from_ascii(input_text);
 
         // Test against a Vec<f64>
         assert_eq!(result, vec![4600.7724609375, 5483.7724609375, 1550.7724609375, -22.2275390625])

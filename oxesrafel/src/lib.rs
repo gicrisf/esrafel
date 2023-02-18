@@ -10,7 +10,7 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 // Get vector from ASCII input
 #[pyfunction]
 fn get_from_ascii(content: &str) -> PyResult<Vec<f64>> {
-    Ok(libesrafel::get_from_ascii(content))
+    Ok(libesrafel::io::get_from_ascii(content))
 }
 
 #[pyfunction]
@@ -19,7 +19,7 @@ fn calcola() -> PyResult<Vec<f64>> {
     let sweep = 100.0;
     let points = 1024.0;
     rads.push(Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new()));
-    Ok(libesrafel::cmd99::calcola(&rads, sweep, points))
+    Ok(libesrafel::eprft::calcola(&rads, sweep, points))
 }
 
 /// A Python module implemented in Rust.

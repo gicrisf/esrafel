@@ -33,7 +33,6 @@ use std::io::{Read, Write};
 use serde::{Serialize, Deserialize};
 
 mod drawers;
-mod esr_io;
 mod params;
 mod preferences;
 mod shortcuts;
@@ -41,6 +40,7 @@ mod about;
 mod nuc_object;
 
 use libesrafel::{Radical, Nucleus};
+use libesrafel::io::get_from_ascii;
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
 use preferences::{PreferencesModel, PreferencesMsg};
@@ -360,7 +360,7 @@ impl AppUpdate for AppModel {
                     if let Some(emp) = &self.empirical {
 
                         let (newsigma, newteor, newrads) =
-                            libesrafel::cmd99::mc_fit(
+                            libesrafel::eprft::mc_fit(
                                 &emp,
                                 self.points as f64,
                                 self.sweep,
@@ -386,7 +386,7 @@ impl AppUpdate for AppModel {
                 // Must be compatible with every future simulator implementation
                 if self.montecarlo {
                     components.chart.send(ChartMsg::AddTheoretical(
-                        libesrafel::cmd99::calcola(&self.rads, self.sweep, self.points as f64)))
+                        libesrafel::eprft::calcola(&self.rads, self.sweep, self.points as f64)))
                                     .expect("Failed sending new theoretical spectrum to the Chart");
                 }
             }
@@ -418,7 +418,7 @@ impl AppUpdate for AppModel {
                                 Some(mut file) => {
                                     match file.read_to_string(&mut data) {
                                         Ok(_) => {
-                                            self.empirical = Some(esr_io::get_from_ascii(&data));
+                                            self.empirical = Some(get_from_ascii(&data));
                                             send!(sender, AppMsg::SpawnToast("Loaded!".into()));
                                         },
                                         Err(e) => {

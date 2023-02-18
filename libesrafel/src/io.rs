@@ -1,3 +1,4 @@
+// Read spectrum from an ASCII source
 pub fn get_from_ascii(content: &str) -> Vec<f64> {
     // let mut fld = Vec::new();  // field
     let mut int = Vec::new();  // intensity

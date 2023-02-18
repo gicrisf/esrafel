@@ -1,0 +1,3 @@
+#+title: EPRFT
+
+Convolution of the lineshape is achieved by means of the Fourier transform method.
