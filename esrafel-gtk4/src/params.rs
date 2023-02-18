@@ -12,8 +12,8 @@ use relm4::{
     factory::{Factory, FactoryVecDeque, FactoryPrototype, DynamicIndex, WeakDynamicIndex},
 };
 
+use libesrafel::{Radical, Nucleus, Param};
 use crate::{AppModel, AppMsg};
-use crate::sim::{Radical, Nucleus, Param};
 use crate::nuc_object::NucObject;
 
 // NucPar Component

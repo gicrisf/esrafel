@@ -1,97 +1,6 @@
-use rand::{thread_rng, Rng};
-use serde::{Serialize, Deserialize};
+use crate::{Radical};
 
-// TODO use better var names
-// Temporarily maintaining legacy name to make easier comparison
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Param {
-    pub val: f64,  // Value; starts with 0.0
-    pub var: f64,  // Variation; starts with: 0.0
-}
-
-impl Param {
-    pub fn set(val: f64, var: f64) -> Param {
-        Param { val, var, }
-    }
-
-    pub fn randomize(&self) -> Param {
-        if self.var != 0.0 {
-            let mut rng = thread_rng();
-            let random: f64 = rng.gen();  // random number in range [0, 1)
-            let rnd = 2.0*random-1.0;
-            let new_val = self.val + rnd * self.var;
-            return Param { val: new_val, var: self.var }
-        } else {
-            return Param { val: self.val, var: self.var }
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Nucleus {
-    pub spin: Param,  // Nuclear spin;
-    pub hpf: Param,  // Hyperfine constant;
-    pub eqs: Param,  // Equivalent nucleus; Should be u8!
-}
-
-impl Nucleus {
-    pub fn set(spin: f64, hpf: f64, eqs: f64) -> Nucleus {
-        Nucleus {
-            spin: Param::set(spin, 0.0),
-            hpf: Param::set(hpf, 0.0),
-            eqs: Param::set(eqs, 0.0),
-        }
-    }
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Radical {
-    pub lwa: Param,  // Line width A
-    // pub lwb: Param,
-    // pub lwc: Param,
-    pub lrtz: Param,  // Lorentzian linewidth parameter (%)
-    pub amount: Param,  // Relative amount
-    pub dh1: Param,
-    pub nucs: Vec<Nucleus>,
-}
-
-impl Radical {
-    pub fn set(lwa: f64, lrtz: f64, amount: f64, dh1: f64, nucs: Vec<Nucleus>) -> Self {
-        Self {
-            lwa: Param::set(lwa, 0.0),
-            lrtz: Param::set(lrtz, 0.0),
-            amount: Param::set(amount, 0.0),
-            dh1: Param::set(dh1, 0.0),
-            nucs,
-        }
-    }
-
-    // Radical without nuclei and standard parameters;
-    pub fn _electron() -> Radical {
-        Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new())
-    }
-
-    // Nitroxide-like test radical
-    pub fn _probe() -> Radical {
-        let mut rad = Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new());
-        rad.nucs.push(Nucleus::set(1.0, 14.0, 1.0));
-        rad
-    }
-
-    pub fn var_probe() -> Radical {
-        let mut rad = Radical::set(0.5, 100.0, 100.0, 0.0, Vec::new());
-        rad.nucs.push(Nucleus::set(1.0, 19.0, 1.0));
-        rad.nucs[0].hpf.var = 1.0;
-        rad.lwa.var = 0.1;
-        rad.dh1.var = 0.1;
-        rad.lrtz.var = 0.1;
-        rad.amount.var = 0.1;
-        rad
-    } // var probe
-}
-
-// Calculate teorical spectra
+// Calculate theoretical spectra
 pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
     let incrgauss = sweep/(points -1.0);
     let mut lno = vec![0.0; points as usize];
@@ -230,7 +139,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
 // MONTECARLO
 
 // **Strict** porting of classic Montecarlo functions of ESR Commander 1999
-fn errore(
+pub fn errore(
     exp: &Vec<f64>,
     points: f64,
     mut newteor: Vec<f64>) -> (f64, Vec<f64>) {
@@ -262,6 +171,9 @@ fn errore(
 
     (newsigma, newteor)
 }  // mc
+
+// TODO use better var names
+// Temporarily maintaining legacy name to make easier comparison
 
 // Reset potentially aberrant value returned by MC function;
 fn check_pars(mut rad: Radical) -> Radical {
@@ -296,7 +208,8 @@ fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
     mc_rads
 }
 
-// Wrap MC logic in a single function
+// This is my way to wrap MC logic in a single function
+// This return a simple tuple, so we maintain pure functional paradigm
 pub fn mc_fit(
     empirical: &Vec<f64>,
     points: f64,

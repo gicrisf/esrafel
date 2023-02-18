@@ -34,14 +34,13 @@ use serde::{Serialize, Deserialize};
 
 mod drawers;
 mod esr_io;
-mod sim;
 mod params;
 mod preferences;
 mod shortcuts;
 mod about;
 mod nuc_object;
 
-use sim::{Radical, Nucleus};
+use libesrafel::{Radical, Nucleus};
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
 use preferences::{PreferencesModel, PreferencesMsg};
@@ -361,7 +360,7 @@ impl AppUpdate for AppModel {
                     if let Some(emp) = &self.empirical {
 
                         let (newsigma, newteor, newrads) =
-                            sim::mc_fit(
+                            libesrafel::cmd99::mc_fit(
                                 &emp,
                                 self.points as f64,
                                 self.sweep,
@@ -387,7 +386,7 @@ impl AppUpdate for AppModel {
                 // Must be compatible with every future simulator implementation
                 if self.montecarlo {
                     components.chart.send(ChartMsg::AddTheoretical(
-                        sim::calcola(&self.rads, self.sweep, self.points as f64)))
+                        libesrafel::cmd99::calcola(&self.rads, self.sweep, self.points as f64)))
                                     .expect("Failed sending new theoretical spectrum to the Chart");
                 }
             }
