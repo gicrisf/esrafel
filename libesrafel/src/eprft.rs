@@ -21,7 +21,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
 
         let mut pa = 1.0;  // peak area?
         for (i, nuc) in rad.nucs.iter().enumerate() {
-            pa = pa + pcostanti[i] * spini[i] * nuc.eqs.val;
+            pa += pcostanti[i] * spini[i] * nuc.eqs.val;
         }
         if pa < points { pa = points; }
 
@@ -49,7 +49,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
 
                     }  // if intensity[indice1]...
 
-                    indice1 = indice1 - 1; // Decrement
+                    indice1 -= 1; // Decrement
                 }  // while indice1...
 
                 eq+=1;
@@ -57,7 +57,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
         }  // for nuc in rad.nucs
 
         let shift: isize = ((points as isize)-(pf as isize))/2;
-        let shift_abs: usize = shift.abs() as usize;  // Eraseme
+        let shift_abs: usize = shift.unsigned_abs();  // Eraseme
 
         if shift < 0 {
             let mut point = 1;
@@ -94,7 +94,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
             let a = w2-rad.dh1.val;
             // Peak intensity!
             lno[point] = (t1*a)/((1.0+t2.powi(2)*a.powi(2))*(1.0+t2.powi(2)*a.powi(2)));
-            w2 = w2 + incrgauss as f64;
+            w2 += incrgauss as f64;
 
             point+=1;  // Increment point
         }  // for (j=1;j<=punti;j++)
@@ -109,8 +109,8 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
         while point < points as usize {
             let a = w2-rad.dh1.val;
             let dd = (std::f64::consts::E).powf(-0.5*(t2.powi(2))*(a.powi(2)));
-            if dd > 1E-35 { lno[point] = lno[point] + t1*a*dd; }
-            w2 = w2 + incrgauss as f64;
+            if dd > 1E-35 { lno[point] += t1*a*dd; }
+            w2 += incrgauss as f64;
 
             point+=1;  // Increment point
         }  // for (j=1;j<=punti;j++)
@@ -140,7 +140,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
 
 // **Strict** porting of classic Montecarlo functions of ESR Commander 1999
 pub fn errore(
-    exp: &Vec<f64>,
+    exp: &[f64],
     points: f64,
     mut newteor: Vec<f64>) -> (f64, Vec<f64>) {
 
@@ -162,7 +162,7 @@ pub fn errore(
     };
 
     for j in start..fine {
-        newteor[j] = newteor[j]*norma;
+        newteor[j] *= norma;
         let diff = (exp[j] - newteor[j]).powi(2);
         somma+=diff;
     }
@@ -211,7 +211,7 @@ fn caso(rads: &[Radical]) -> Vec<Radical> {
 // This is my way to wrap MC logic in a single function
 // This return a simple tuple, so we maintain pure functional paradigm
 pub fn mc_fit(
-    empirical: &Vec<f64>,
+    empirical: &[f64],
     points: f64,
     sweep: f64,
     mut sigma: f64,
@@ -222,7 +222,7 @@ pub fn mc_fit(
 
     // Reallocate params if variance is less than previous iteration
     let (newsigma, newteor) = errore(
-        &empirical, points,
+        empirical, points,
         calcola(&newrads, sweep, points)
     );
 
