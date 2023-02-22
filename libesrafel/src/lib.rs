@@ -20,9 +20,9 @@ impl Param {
             let random: f64 = rng.gen();  // random number in range [0, 1)
             let rnd = 2.0*random-1.0;
             let new_val = self.val + rnd * self.var;
-            return Param { val: new_val, var: self.var }
+            Param { val: new_val, var: self.var }
         } else {
-            return Param { val: self.val, var: self.var }
+            Param { val: self.val, var: self.var }
         }
     }
 }

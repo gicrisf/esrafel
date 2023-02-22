@@ -184,17 +184,17 @@ fn check_pars(mut rad: Radical) -> Radical {
     rad
 }
 
-fn caso(rads: &Vec<Radical>) -> Vec<Radical> {
+fn caso(rads: &[Radical]) -> Vec<Radical> {
     let mut mc_rads = Vec::new();
 
-    for mut rad in (&rads).to_vec() {
+    for mut rad in rads.iter().cloned() {
         rad.lwa = rad.lwa.randomize();
         rad.amount = rad.amount.randomize();
         rad.lrtz = rad.lrtz.randomize();
         rad.dh1 = rad.dh1.randomize();
 
         let mut randomized_nucs = Vec::new();
-        for mut nuc in rad.nucs.clone() {
+        for mut nuc in rad.nucs.iter().cloned() {
             nuc.hpf = nuc.hpf.randomize();
             randomized_nucs.push(nuc);
         }
