@@ -28,6 +28,46 @@ fn calcola() -> PyResult<Vec<f64>> {
     Ok(libesrafel::eprft::calcola(&rads, sweep, points))
 }
 
+#[pyclass]
+pub struct Simulator {
+    pub rads: Vec<Radical>,
+    pub sweep: f64,
+    pub points: f64,
+}
+
+fn rad_to_rs(rad: &Radical) -> libesrafel::Radical {
+    libesrafel::Radical {
+        lwa: libesrafel::Param::set(rad.lwa.val, rad.lwa.var),
+        lrtz: libesrafel::Param::set(rad.lrtz.val, rad.lrtz.var),
+        amount: libesrafel::Param::set(rad.amount.val, rad.amount.var),
+        dh1: libesrafel::Param::set(rad.dh1.val, rad.dh1.var),
+        nucs: Vec::new(),
+    }
+}
+
+#[pymethods]
+impl Simulator {
+    #[new]
+    pub fn new(sweep: f64, points: f64) -> Self {
+        Self {
+            rads: Vec::new(),
+            sweep,
+            points,
+        }
+    }
+
+    pub fn calc(&self) -> PyResult<Vec<f64>> {
+        let mut rads = Vec::new();
+        for rad in &self.rads {
+            rads.push(rad_to_rs(rad))
+        };
+
+        // debug
+        rads.push(libesrafel::Radical::_probe());
+        Ok(libesrafel::eprft::calcola(&rads, self.sweep, self.points))
+    }
+}
+
 /// A Python module implemented in Rust.
 #[pymodule]
 fn oxesrafel(_py: Python, m: &PyModule) -> PyResult<()> {
@@ -37,5 +77,6 @@ fn oxesrafel(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<Param>()?;
     m.add_class::<Nucleus>()?;
     m.add_class::<Radical>()?;
+    m.add_class::<Simulator>()?;
     Ok(())
 }
