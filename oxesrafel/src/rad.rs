@@ -1,8 +1,8 @@
 use pyo3::prelude::*;
 use crate::par::Param;
 use crate::nuc::Nucleus;
-// use pyo3::types::PyList;
 
+#[derive(Clone)]
 #[pyclass]
 pub struct Radical {
     pub lwa: Param,
@@ -15,8 +15,7 @@ pub struct Radical {
 #[pymethods]
 impl Radical {
     #[new]
-    pub fn new(lwa: Param, lrtz: Param, amount: Param, dh1: Param) -> Self {
-        let nucs = Vec::new();
+    pub fn new(lwa: Param, lrtz: Param, amount: Param, dh1: Param, nucs: Vec<Nucleus>) -> Self {
         Self { lwa, lrtz, amount, dh1, nucs }
     }
 
@@ -75,7 +74,16 @@ impl Radical {
         Ok(())
     }
 
-    // TODO nucs getter
+    #[getter]
+    pub fn get_nucs(&self) -> PyResult<Vec<Nucleus>> {
+        Ok(self.nucs.clone())
+    }
+
+    #[setter]
+    pub fn set_nucs(&mut self, value: Vec<Nucleus>) -> PyResult<()> {
+        self.nucs = value;
+        Ok(())
+    }
 
     pub fn push_nuc(&mut self, value: Nucleus) -> PyResult<()> {
         self.nucs.push(value);

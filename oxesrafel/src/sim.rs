@@ -1,6 +1,4 @@
 use pyo3::prelude::*;
-use crate::par::Param;
-use crate::nuc::Nucleus;
 use crate::rad::Radical;
 
 #[pyclass]
@@ -23,22 +21,22 @@ fn rad_to_rs(rad: &Radical) -> libesrafel::Radical {
 #[pymethods]
 impl Simulator {
     #[new]
-    pub fn new(sweep: f64, points: f64) -> Self {
+    pub fn new(sweep: f64, points: f64, rads: Vec<Radical>) -> Self {
         Self {
-            rads: Vec::new(),
+            rads,
             sweep,
             points,
         }
     }
 
     pub fn calc(&self) -> PyResult<Vec<f64>> {
-        let mut rads = Vec::new();
-        for rad in &self.rads {
-            rads.push(rad_to_rs(rad))
-        };
-
-        // debug
-        rads.push(libesrafel::Radical::_probe());
-        Ok(libesrafel::eprft::calcola(&rads, self.sweep, self.points))
+        let rads = &self.rads.clone().into_iter().map(|r| rad_to_rs(&r)).collect();
+        Ok(libesrafel::eprft::calcola(rads, self.sweep, self.points))
     }
+
+    #[getter]
+    pub fn get_rads(&self) -> PyResult<Vec<Radical>> {
+        Ok(self.rads.clone())
+    }
+
 }
