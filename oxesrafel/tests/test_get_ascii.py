@@ -12,5 +12,6 @@ with open("tests/data/na-example-acn.txt") as f:
 
         print("now plotting...")
         plt.plot(x_fld, y_int)
-        plt.show()
+        plt.savefig('tests/img/na-example-acn.png', dpi=500)
+        # plt.show()
         print("end of the test.")
