@@ -1,6 +1,7 @@
 use pyo3::prelude::*;
 use crate::nuc::Nucleus;
 use crate::rad::Radical;
+use crate::par::Param;
 
 #[pyclass]
 pub struct Simulator {
@@ -18,6 +19,14 @@ fn nuc_to_rs(nuc: &Nucleus) -> libesrafel::Nucleus {
     }
 }
 
+fn nuc_to_py(nuc: &libesrafel::Nucleus) -> Nucleus {
+    Nucleus {
+        spin: Param::new(nuc.spin.val, nuc.spin.var),
+        hpf: Param::new(nuc.hpf.val, nuc.hpf.var),
+        eqs: Param::new(nuc.eqs.val, nuc.eqs.var),
+    }
+}
+
 fn rad_to_rs(rad: &Radical) -> libesrafel::Radical {
     let nucs = rad.nucs.clone().into_iter().map(|n| nuc_to_rs(&n)).collect();
 
@@ -26,6 +35,18 @@ fn rad_to_rs(rad: &Radical) -> libesrafel::Radical {
         lrtz: libesrafel::Param::set(rad.lrtz.val, rad.lrtz.var),
         amount: libesrafel::Param::set(rad.amount.val, rad.amount.var),
         dh1: libesrafel::Param::set(rad.dh1.val, rad.dh1.var),
+        nucs,
+    }
+}
+
+pub fn rad_to_py(rad: &libesrafel::Radical) -> Radical {
+    let nucs = rad.nucs.clone().into_iter().map(|n| nuc_to_py(&n)).collect();
+
+    Radical {
+        lwa: Param::new(rad.lwa.val, rad.lwa.var),
+        lrtz: Param::new(rad.lrtz.val, rad.lrtz.var),
+        amount: Param::new(rad.amount.val, rad.amount.var),
+        dh1: Param::new(rad.dh1.val, rad.dh1.var),
         nucs,
     }
 }

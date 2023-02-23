@@ -10,6 +10,8 @@ use crate::nuc::Nucleus;
 use crate::rad::Radical;
 use crate::sim::Simulator;
 use crate::iof::get_from_ascii;
+use crate::iof::ascii_import;
+use crate::iof::get_from_sim;
 
 /// Formats the sum of two numbers as string.
 #[pyfunction]
@@ -22,6 +24,8 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 fn oxesrafel(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
     m.add_function(wrap_pyfunction!(get_from_ascii, m)?)?;
+    m.add_function(wrap_pyfunction!(ascii_import, m)?)?;
+    m.add_function(wrap_pyfunction!(get_from_sim, m)?)?;
     m.add_class::<Param>()?;
     m.add_class::<Nucleus>()?;
     m.add_class::<Radical>()?;
