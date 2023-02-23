@@ -9,7 +9,6 @@ use crate::par::Param;
 use crate::nuc::Nucleus;
 use crate::rad::Radical;
 use crate::sim::Simulator;
-use crate::iof::get_from_ascii;
 use crate::iof::ascii_import;
 use crate::iof::ascii_to_json;
 use crate::iof::get_from_sim;
@@ -25,7 +24,6 @@ fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
 #[pymodule]
 fn oxesrafel(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
-    m.add_function(wrap_pyfunction!(get_from_ascii, m)?)?;
     m.add_function(wrap_pyfunction!(ascii_import, m)?)?;
     m.add_function(wrap_pyfunction!(ascii_to_json, m)?)?;
     m.add_function(wrap_pyfunction!(get_from_sim, m)?)?;

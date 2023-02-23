@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from oxesrafel import ascii_import, get_from_ascii, ascii_to_json
+from oxesrafel import ascii_import, ascii_to_json
 import matplotlib.pyplot as plt
 
 spectrum = "na-example-acn"
@@ -17,16 +17,6 @@ with open("tests/data/{}.txt".format(spectrum)) as f:
         plt.savefig('tests/img/{}.png'.format(spectrum), dpi=500)
         # plt.show()
         print("ascii_import end of the test.")
-
-with open("tests/data/{}.txt".format(spectrum)) as f:
-        y_int = get_from_ascii(f.read())
-        len_y = len(y_int)
-        x_fld = range(0, len_y)
-        print("now plotting...")
-        plt.plot(x_fld, y_int)
-        # plt.savefig('tests/img/{}.png'.format(spectrum), dpi=500)
-        # plt.show()
-        print("get_from_ascii end of the test.")
 
 # This works, it's just annoying
 # with open("tests/data/{}.txt".format(spectrum)) as f:

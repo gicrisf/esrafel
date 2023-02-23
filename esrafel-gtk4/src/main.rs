@@ -39,8 +39,8 @@ mod shortcuts;
 mod about;
 mod nuc_object;
 
-use libesrafel::{Radical, Nucleus};
-use libesrafel::io::get_from_ascii;
+use libesrafel::Radical;
+use libesrafel::io::{Spectrum, SimulationState};
 use drawers::{Line, Color};
 use params::{RadParModel, RadParMsg};
 use preferences::{PreferencesModel, PreferencesMsg};
@@ -418,7 +418,7 @@ impl AppUpdate for AppModel {
                                 Some(mut file) => {
                                     match file.read_to_string(&mut data) {
                                         Ok(_) => {
-                                            self.empirical = Some(get_from_ascii(&data));
+                                            self.empirical = Some(Spectrum::from_ascii(&data).get_int());
                                             send!(sender, AppMsg::SpawnToast("Loaded!".into()));
                                         },
                                         Err(e) => {
@@ -485,38 +485,8 @@ impl AppUpdate for AppModel {
                                 Ok(mut file) => {
                                     match file.read_to_string(&mut data) {
                                         Ok(_) => {
-                                            let mut lines = data.lines();
-                                            let mut rads = Vec::new();
-
-                                            // TODO make this parsing process a separate function
-                                            let how_many_rads: i32 = lines.next().unwrap().trim().parse().expect("Cannot read how many Radicals");
-                                            let points: i32 = lines.next().unwrap().trim().parse().unwrap();
-                                            let sweep: i32 = lines.next().unwrap().trim().parse().unwrap();
-
-                                            // println!("rads: {}, points: {}, sweep: {}", how_many_rads, points, sweep);
-
-                                            for _ in 0..how_many_rads {
-                                                let amount: f64 = lines.next().unwrap().trim().parse().unwrap();
-                                                let dh1: f64 = lines.next().unwrap().trim().parse().unwrap();
-                                                let lwa: f64 = lines.next().unwrap().trim().parse().unwrap();
-                                                let lrtz: f64 = lines.next().unwrap().trim().parse().unwrap();
-
-                                                // println!("New radical with amount {}, center {}, lwa {}, lrtz {}", amount, center, lw, lrtz);
-
-                                                let how_many_const: i32 = lines.next().unwrap().trim().parse().unwrap();
-
-                                                let mut nucs = Vec::new();
-                                                for _ in 0..how_many_const {
-                                                    let eqs: i32 = lines.next().unwrap().trim().parse().unwrap();
-                                                    let spin: f64 = lines.next().unwrap().trim().parse().unwrap();
-                                                    let hpf: f64 = lines.next().unwrap().trim().parse().unwrap();
-
-                                                    // println!("New nuc with eqs {}, spin {}, hpf {}", nuclei, spin, hpf);
-                                                    nucs.push(Nucleus::set(spin, hpf, eqs as f64));
-                                                }  // for nuc in nucs
-
-                                                rads.push(Radical::set(lwa, lrtz, amount, dh1, nucs));
-                                            }  // for rad in rads
+                                            let (points, sweep, rads) =
+                                                SimulationState::from_simfile(&data).into_tuple();
 
                                             self.points = points;
                                             self.sweep = sweep.into();
