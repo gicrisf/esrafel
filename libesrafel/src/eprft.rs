@@ -59,6 +59,7 @@ pub fn calcola(rads: &Vec<Radical>, sweep: f64, points: f64) -> Vec<f64> {
         let shift: isize = ((points as isize)-(pf as isize))/2;
         let shift_abs: usize = shift.unsigned_abs();  // Eraseme
 
+        // TODO refactor with match
         if shift < 0 {
             let mut point = 1;
             while point < points as usize {

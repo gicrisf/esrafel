@@ -1,3 +1,117 @@
 #+title: EPRFT
 
-Convolution of the lineshape is achieved by means of the Fourier transform method.
+# Convolution of the lineshape is achieved by means of the Fourier transform method.
+
+* Functional paradigm
+# Originariamente, la procedura di calcolo era concepita con un approccio imperativo e pensata per essere scritta attraverso una serie di routines e subroutines votate alla manipolazione di array.
+Il programma è stato scritto secondo un approccio funzionale, quindi suddiviso in funzioni che non influenzano in alcun modo lo stato del sistema globale, ma che restituiscono un output esclusivamente sulla base degli input dati, senza alterare variabili esterne alla funzione.
+# Parlare di lisp, del paradigma funzionale?
+
+Questo ci consente di:
+- Minimizzare eventuali errori
+- Semplificare il debugging
+- Avvicinare il codice alle funzioni matematiche che descrive, incrementandone la leggibilità (e la documentabilità)
+
+# Peccato non sia ancora vero
+
+* Fitting procedure
+# By Burkhard Kirste
+The fitting program is constructed according to the following scheme.
+
+** Input
+We must give:
+- Trial parameters;
+- Maximum variations per iteration (for the desired parameters);
+- Data of the experimental spectrum (as array or vector of $n$ elements).
+
+** TODO Stick spectrum
+#+begin_src rust
+pub fn stickspectrum(rads: &Vec<Radical>) -> Vec<f64> {}
+#+end_src
+
+** Fourier transformation of the stick spectrum
+This step yields $n$ complex discrete Fourier coefficients, $a_r + ib_r$ (r = 0, 1, 2, ..., n-1).
+
+** Multiplication with the Fourier transform of the lineshape function
+#+begin_quote
+Strictly speaking, a complete complex multiplication with the Fourier transform of a Lorentzian or Gaussian line, centered at the frequency origin, should be performed. However, the imaginary part of this transform can usually be ignored. The real part is given by an exponential decay function for Lorentzian () or Gaussian lineshape (),
+#+end_quote
+
+$$ f_r^L = \exp{(-\pi \sqrt{3}br/c)} $$
+
+$$ f_r^G = \exp{(-(\pi br/c)^2/2)} $$
+
+- $b$ denotes the first derivative peak-to-peak linewidth;
+- $c$ is the scan range (corresponding to $n$ data points).
+
+#+begin_quote
+This simplified procedure for the convolution of the lineshape works correctly provided that the scan range extends a few linewidths beyond the outermost lines. (Otherwise endpoint problems may arise; i.e. the truncated part is folded to the other end of the spectrum.)
+#+end_quote
+
+** Generation of the first derivative
+Multiplicate with $2 \pi ir/n$.
+
+** Inverse Fourier transformation
+This yields the simulated spectrum (real part, $n$ points).
+
+** Normalization
+Adjustment of the intensity of the calculated spectrum relative to the experimental spectrum by multiplication with
+
+$$ N = (\Sigma y_r^{exp} y_r^{calc})/(\Sigma (y_r^{calc}^2)) $$
+
+# Sarebbe comodo se restituissi il fattore di normalizzazione pure per il plotting. Potrei restituirlo come vettore, oppure potrei restituire direttamente lo spettro normalizzato.
+
+** RMSE
+Evaluation of the standard deviation of the fit (root mean square error, $\sigma$) in terms of a point-by-point comparison between theoretical and experimental spectra (complete spectra or selected part),
+
+$$ \sigma = \sqrt{\Sigma(y_r^{exp} - Ny_r^{calc})^2 / (n-1)} $$
+
+This parameter serves as criterion for the quality of the match.
+
+** Comparison with previous best fit
+Unless zeroth iteration, comparison with previous best fit ($\sifgma_0$). If $\sigma < \sigma_0$, the new set of parameters is retained, otherwise the old set is restored. Optionally, display of improved set of parameters.
+
+** Monte Carlo Move
+Variation of the parameters $a_j$ by small but random amounts,
+
+$$ a'_j = a_j + (2 rnd(x) - 1) \Delta a_j$$
+
+- $rnd(x)$ is the random function
+- $\Delta a_j$ is the maximum variation per iteration
+
+#+begin_src rust
+fn mc_move(rads:&[Radical]) -> Vec<Radical> {
+    let mut randomized_rads = Vec::new();
+    for mut rad in rads.iter().cloned() {
+        rad.lwa = rad.lwa.randomize();
+        rad.amount = rad.amount.randomize();
+        rad.lrtz = rad.lrtz.randomize();
+        rad.dh1 = rad.dh1.randomize();
+
+        let mut randomized_nucs = Vec::new();
+        for mut nuc in rad.nucs.iter().cloned() {
+            nuc.hpf = nuc.hpf.randomize();
+            randomized_nucs.push(nuc);
+        }
+        rad.nucs = randomized_nucs;
+
+        // I should move these checks
+        // inside the randomization method itself
+        if rad.lwa.val < 0.0 { rad.lwa.val = 0.0 };
+        if rad.lrtz.val < 0.0 { rad.lrtz.val = 0.0 };
+        if rad.amount.val < 0.0 { rad.amount.val = 0.0 };
+        if rad.lrtz.val > 100.0 { rad.lrtz.val = 100.0 };
+        randomized_rads.push(rad);
+    }  // for rad in rads
+
+    randomized_rads
+}
+#+end_src
+
+** Repete
+Repetition of the procedure (starting at construction of stick spectrum) until the maximum number of iterations is reached.
+
+** Ouptut
+Printout of the optimized parameters and the standard deviation of the best fit. Optionally, the calculated spectrum is stored, displayed, and/or plotted.
+
+Now you can stop or try with a new trial (re-setting the input parameters).
